@@ -264,10 +264,47 @@
   /* ---------------- view ---------------- */
 
   const view = { k: 1, x: 0, y: 0 };
-  const clampK = (k) => Math.min(K_MAX, Math.max(K_MIN, k));
   const stage = $("#stage");
+  const LEGEND_CLEARANCE = 64;
+
+  function box() { return svg.getBoundingClientRect(); }
+
+  // The part of the canvas the map can use: the detail panel covers the
+  // right edge on desktop and the bottom on phones.
+  function room() {
+    const r = box();
+    const open = panel.classList.contains("open");
+    return {
+      w: r.width - (open && !narrow() ? panel.offsetWidth : 0),
+      h: r.height - (open && narrow() ? panel.offsetHeight : 0),
+    };
+  }
+
+  // Zooming out stops once the whole map fits; past that there is nothing
+  // more to see, only empty canvas.
+  function clampK(k) {
+    const r = box();
+    const fit = Math.min(r.width / W, r.height / H) || K_MIN;
+    return Math.min(K_MAX, Math.max(K_MIN, Math.min(fit, 1), k));
+  }
+
+  // Keeps the map pinned inside the canvas. Along an axis where the map is
+  // larger than the visible area, its edges cannot be dragged past the
+  // canvas edges; where it is smaller, it is centred across and sits at the
+  // top, under the column headers. The bottom keeps clear of the legend so
+  // the last rows can always be read.
+  function clampView(v) {
+    v.k = clampK(v.k);
+    const { w, h } = room();
+    const cw = W * v.k, ch = H * v.k;
+    const usable = h - LEGEND_CLEARANCE;
+    v.x = cw <= w ? (w - cw) / 2 : Math.min(0, Math.max(w - cw, v.x));
+    v.y = ch <= usable ? 0 : Math.min(0, Math.max(usable - ch, v.y));
+    return v;
+  }
 
   function apply() {
+    clampView(view);
     vp.setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
     for (const L of layers) {
       if (!L.lane) continue;
@@ -275,8 +312,6 @@
       L.lane.style.maxWidth = Math.max(0, (L.w + GAP) * view.k - 14) + "px";
     }
   }
-
-  function box() { return svg.getBoundingClientRect(); }
 
   function zoomAt(cx, cy, f) {
     const r = box();
@@ -294,14 +329,13 @@
     return { k, x: W * k < r.width ? (r.width - W * k) / 2 : 0, y: 0 };
   }
   function overview() {
-    const r = box();
-    const k = clampK(Math.min((r.width - 24) / W, (r.height - 24) / H));
-    return { k, x: (r.width - W * k) / 2, y: Math.max(0, (r.height - H * k) / 2) };
+    return clampView({ k: 0, x: 0, y: 0 });
   }
 
   let anim = 0;
   function animateTo(target, ms = 480) {
     cancelAnimationFrame(anim);
+    clampView(target);
     const from = { ...view };
     const t0 = performance.now();
     const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -321,10 +355,7 @@
   // The panel covers part of the map (the right edge on desktop, the bottom
   // on phones), so "centre" means the centre of whatever is still visible.
   function centerOn(list, instant) {
-    const r = box();
-    const open = panel.classList.contains("open");
-    const vw = r.width - (open && !narrow() ? panel.offsetWidth : 0);
-    const vh = r.height - (open && narrow() ? panel.offsetHeight : 0);
+    const { w: vw, h: vh } = room();
     const xs = list.map((n) => n.L.x), ys = list.map((n) => n.y);
     const x0 = Math.min(...xs) - 20, x1 = Math.max(...list.map((n) => n.L.x + MARK + n.w)) + 20;
     const y0 = Math.min(...ys) - 30, y1 = Math.max(...ys) + 30;
@@ -634,8 +665,10 @@
     panel.scrollTop = 0;
   }
   function closePanel() {
+    const was = panel.classList.contains("open");
     panel.classList.remove("open");
     stage.classList.remove("panel-open");
+    if (was) animateTo({ ...view });
   }
 
   /* ---------------- selection ---------------- */
