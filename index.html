@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Dependency Structure of Modern AI · Arav Panwar</title>
+<meta name="description" content="A layered map of AI: how LLMs, computer vision and generative models rest on architectures, methods, software, hardware and mathematics.">
+<meta name="author" content="Arav Panwar">
+<meta property="og:title" content="The Dependency Structure of Modern AI">
+<meta property="og:description" content="Every concept in modern AI, from linear algebra to agents, and what each one is built on.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://dsmai.aravpanwar.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1e4a33">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/source-serif-4.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/map.css">
+<script>
+  try { var t = localStorage.getItem("dsmai-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <a class="back" href="https://www.aravpanwar.com/">Arav Panwar</a>
+    <h1>The Dependency Structure of Modern AI</h1>
+  </div>
+  <p class="sub" id="sub">How modern AI is built, from linear algebra up.</p>
+  <div class="tools">
+    <div class="search">
+      <input id="q" type="search" placeholder="Search concepts" autocomplete="off" spellcheck="false"
+             role="combobox" aria-expanded="false" aria-controls="results" aria-label="Search concepts">
+      <kbd>/</kbd>
+      <ul id="results" role="listbox" hidden></ul>
+    </div>
+    <div class="seg" role="group" aria-label="View">
+      <button type="button" data-view="map" class="on" aria-pressed="true">Map</button>
+      <button type="button" data-view="index" aria-pressed="false">Index</button>
+    </div>
+    <button type="button" class="icon" id="theme" aria-label="Toggle dark mode">
+      <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 3a7 7 0 0 1 0 14z" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="stage" id="stage">
+  <div class="lanes" id="lanes" aria-hidden="true"></div>
+  <div class="canvas">
+    <svg id="map" role="img" aria-label="Layered dependency map of AI concepts">
+      <g id="viewport"></g>
+    </svg>
+  </div>
+
+  <div class="legend" id="legend">
+    <div class="keys">
+      <span class="key up">Built on</span>
+      <span class="key down">Leads to</span>
+    </div>
+    <div class="mode" role="group" aria-label="Trace depth">
+      <button type="button" data-mode="full" class="on" aria-pressed="true">Full lineage</button>
+      <button type="button" data-mode="direct" aria-pressed="false">Direct only</button>
+    </div>
+    <button type="button" class="tbtn" id="timeBtn" aria-pressed="false">Timeline</button>
+    <p class="hint">Hover to trace, click to pin, shift-click a second concept for the path between them. Arrow keys move around.</p>
+  </div>
+
+  <div class="timeline" id="timeline" hidden>
+    <button type="button" class="play" id="play" aria-label="Play">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path class="i-play" d="M4 2.5v11l9-5.5z" fill="currentColor"/><path class="i-pause" d="M4 2.5h3v11H4zM9 2.5h3v11H9z" fill="currentColor"/></svg>
+    </button>
+    <div class="track">
+      <input type="range" id="era" min="0" max="1000" step="any" value="1000" aria-label="Year">
+      <div class="ticks" aria-hidden="true"><span style="left:0">1940</span><span style="left:30%">1990</span><span style="left:60%">2010</span><span style="left:100%">now</span></div>
+    </div>
+    <output id="eraOut" for="era">2026</output>
+    <button type="button" class="x" id="eraClose" aria-label="Close timeline">&times;</button>
+  </div>
+
+  <p class="caption" id="caption" hidden></p>
+  <a class="embed-link" id="full" href="./" target="_blank" rel="noopener">Open the full map &rarr;</a>
+
+  <div class="zoom" role="group" aria-label="Zoom">
+    <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
+    <button type="button" data-zoom="out" aria-label="Zoom out">&minus;</button>
+    <button type="button" data-zoom="fit" aria-label="Fit the whole map">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M1 5V1h4M11 1h4v4M15 11v4h-4M5 15H1v-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+  </div>
+
+  <aside class="panel" id="panel" aria-live="polite">
+    <button type="button" class="close" id="close" aria-label="Close">&times;</button>
+    <div id="detail"></div>
+  </aside>
+
+  <section class="index" id="index" hidden aria-label="Index of concepts"></section>
+</main>
+
+<noscript><p class="nojs">This map needs JavaScript to draw.</p></noscript>
+<script src="assets/js/data.js"></script>
+<script src="assets/js/map.js"></script>
+</body>
+</html>
