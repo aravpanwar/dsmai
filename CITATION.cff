@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this map or its data, please cite it as below."
 title: "The Dependency Structure of Modern AI"
 abstract: >-
-  A layered map of 211 concepts in modern AI and the 523 dependencies between
+  A layered map of 211 concepts in modern AI and the 522 dependencies between
   them, tracing LLMs, computer vision and generative models back through
   architectures, learning methods, software, hardware and mathematics.
 type: software

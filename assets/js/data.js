@@ -115,7 +115,7 @@
 
   add("math", "Information theory", [
     { id: "entropy", label: "Entropy", year: 1948, needs: ["expectation"], aka: "information bits shannon",
-      text: "The average surprise of a distribution, measured in bits. It sets the limit of lossless compression, and a language model's loss is literally how many bits it needs per token." },
+      text: "The average surprise of a distribution, measured in bits. It sets the limit of lossless compression, and a language model's loss measures how many bits it needs, on average, per token." },
     { id: "crossent", label: "Cross-entropy", year: 1948, needs: ["entropy"],
       text: "The cost of encoding data from one distribution with a code built for another. The standard loss for classification and language modelling." },
     { id: "kl", label: "KL divergence", year: 1951, needs: ["crossent"], aka: "kullback leibler relative entropy",
@@ -172,8 +172,8 @@
   ]);
 
   add("compute", "Data", [
-    { id: "webdata", label: "Web-scale text", year: 2008, needs: ["distributed"], ref: "https://commoncrawl.org/", aka: "common crawl corpus pretraining data",
-      text: "Common Crawl has published free snapshots of billions of web pages for more than fifteen years. Filtered versions of it make up most of the pretraining text behind large language models." },
+    { id: "webdata", label: "Web-scale data", year: 2008, needs: ["distributed"], ref: "https://commoncrawl.org/", aka: "common crawl corpus pretraining data scraped",
+      text: "Common Crawl has published free snapshots of billions of web pages for more than fifteen years. Filtered web text makes up most of what large language models are pretrained on, and scraped image captions and audio train models such as CLIP and Whisper." },
     { id: "imagenet", label: "ImageNet", year: 2009, ref: "https://www.image-net.org/", aka: "dataset ilsvrc",
       text: "About 14 million images labelled by crowd workers into more than 20,000 categories. Its annual challenge is where deep learning first won decisively, in 2012." },
     { id: "labelling", label: "Human labelling", aka: "annotation crowdsourcing preference data mechanical turk",
@@ -304,7 +304,7 @@
 
   add("software", "GPU stack", [
     { id: "cuda", label: "CUDA", needs: ["gpu"], year: 2007, ref: "https://developer.nvidia.com/cuda-toolkit",
-      text: "NVIDIA's platform for programming GPUs. The libraries built on it over two decades are a large part of why NVIDIA dominates AI hardware." },
+      text: "NVIDIA's platform for programming GPUs. The libraries built on it over nearly two decades are a large part of why NVIDIA dominates AI hardware." },
     { id: "cublas", label: "cuBLAS", year: 2007, needs: ["cuda", "blas"], ref: "https://docs.nvidia.com/cuda/cublas/",
       text: "BLAS for NVIDIA GPUs. When a framework multiplies two large matrices, this (or its cousin CUTLASS) usually does the work." },
     { id: "cudnn", label: "cuDNN", year: 2014, needs: ["cuda", "convolution"], ref: "https://developer.nvidia.com/cudnn",
@@ -441,7 +441,7 @@
     { id: "instruct", label: "Instruction tuning", year: 2021, needs: ["gpt", "supervised", "labelling"], aka: "sft supervised fine-tuning",
       text: "Fine-tune a pretrained model on instruction and response pairs, so it follows requests instead of just continuing the text." },
     { id: "rlhf", label: "RLHF", needs: ["instruct", "ppo", "kl", "labelling"], year: 2022, ref: arxiv("2203.02155"), aka: "reinforcement learning from human feedback reward model",
-      text: "Train a reward model on human preferences, then optimise the language model against it, with a KL penalty that keeps it near the original. The step that turned GPT-3 into ChatGPT." },
+      text: "Train a reward model on human preferences, then optimise the language model against it, with a KL penalty that keeps it near the original. The step that turned GPT-3-style base models into ChatGPT." },
     { id: "dpo", label: "Preference optimisation", needs: ["rlhf", "crossent"], year: 2023, ref: arxiv("2305.18290"), aka: "dpo",
       text: "Drops the separate reward model and the RL loop, turning preference pairs directly into a simple classification-style loss." },
     { id: "reasoning", label: "Reasoning models", needs: ["gpt", "policygrad"], year: 2022, ref: arxiv("2201.11903"), aka: "cot reasoning models thinking",
@@ -479,7 +479,7 @@
     { id: "dit", label: "Diffusion transformers", needs: ["diffusion", "transformer", "flows"], year: 2022, ref: arxiv("2212.09748"), aka: "dit video generation",
       text: "Replace the U-Net denoiser with a transformer over latent patches. Scales better, and sits under most current image and video generators." },
     { id: "stylegan", label: "StyleGAN", needs: ["gan", "norm"], year: 2018, ref: arxiv("1812.04948"),
-      text: "A GAN that injects style at every resolution, giving fine control over generated images. Behind the first photorealistic fake faces." },
+      text: "A GAN that injects style at every resolution, giving fine control over generated images. Behind the fake faces on thispersondoesnotexist.com." },
     { id: "vlm", label: "Vision-language models", needs: ["vit", "gpt", "clip"], year: 2023, ref: arxiv("2304.08485"), aka: "llava multimodal llm",
       text: "Feed image patch embeddings into a language model as if they were tokens, so it can describe, read and reason about pictures." },
   ]);
@@ -533,8 +533,8 @@
 
   add("fields", "Umbrella", [
     { id: "ai", label: "Artificial intelligence", needs: ["ml", "dl", "search", "kr", "rl"], year: 1956,
-      text: "The whole project of making machines do things that seem to need intelligence. Named at the Dartmouth workshop in 1956; learning from data became its dominant approach only decades later." },
-    { id: "ml", label: "Machine learning", year: 1959, needs: ["supervised", "unsupervised", "loss", "validation", "sklearn"],
+      text: "The whole project of making machines do things that seem to need intelligence. Named in the proposal for the 1956 Dartmouth workshop; learning from data became its dominant approach only decades later." },
+    { id: "ml", label: "Machine learning", year: 1959, needs: ["supervised", "unsupervised", "loss", "validation"],
       text: "Programs that improve from data instead of from hand-written rules." },
     { id: "dl", label: "Deep learning", year: 2006, needs: ["ml", "mlp", "backprop", "sgd", "adam", "init", "gpu", "pytorch", "tensorflow", "jax", "alexnet"],
       text: "Machine learning with many-layered neural networks, trained end to end on GPUs. Took over vision, then speech, then language, from 2012 on." },
