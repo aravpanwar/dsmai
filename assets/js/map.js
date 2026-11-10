@@ -1066,15 +1066,19 @@
 
   /* ---------------- theme + keys ---------------- */
 
-  $("#theme").addEventListener("click", () => {
-    const root = document.documentElement;
-    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-    root.dataset.theme = dark ? "light" : "dark";
-    try { localStorage.setItem("dsmai-theme", root.dataset.theme); } catch (e) { /* private mode */ }
-    readInk();
-    draw();
-  });
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readInk(); draw(); });
+  // The page is dark by default and has no theme button; the light theme is
+  // reached with ?theme=light (handled in index.html). A button with
+  // id="theme" in the header would bring the toggle back unchanged.
+  const themeButton = $("#theme");
+  if (themeButton) {
+    themeButton.addEventListener("click", () => {
+      const root = document.documentElement;
+      root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
+      try { localStorage.setItem("dsmai-theme-choice", root.dataset.theme); } catch (e) { /* private mode */ }
+      readInk();
+      draw();
+    });
+  }
 
   // Arrow keys walk the map: up and down within a column, left to the
   // closest thing a concept is built on, right to the closest thing built on
