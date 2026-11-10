@@ -179,14 +179,17 @@
 
   function edgePath(e) {
     const { s, t } = e;
+    const top = Math.min(s.y, t.y), bottom = Math.max(s.y, t.y);
     if (s.L === t.L) {
       const x = s.L.x - 8;
       const b = Math.min(10 + Math.abs(t.y - s.y) * 0.22, GAP * 0.42);
+      e.box = [x - b, top, x, bottom];
       return `M${x},${s.y}C${x - b},${s.y} ${x - b},${t.y} ${x},${t.y}`;
     }
     const x1 = s.L.x + MARK + s.w + 5;
     const x2 = t.L.x - t.r - 3;
     const dx = (x2 - x1) * 0.5;
+    e.box = [x1, top, x2, bottom];
     return `M${x1},${s.y}C${x1 + dx},${s.y} ${x2 - dx},${t.y} ${x2},${t.y}`;
   }
 
@@ -194,7 +197,7 @@
 
   const svg = $("#map");
   const vp = $("#viewport");
-  let coldG, hotG, nodeG;
+  let nodeG;
 
   function el(tag, attrs, parent) {
     const x = document.createElementNS(SVGNS, tag);
@@ -205,13 +208,8 @@
 
   function render() {
     vp.textContent = "";
-    const bands = el("g", {}, vp);
-    for (const L of layers) {
-      el("rect", {
-        class: "band" + (L.i % 2 ? " alt" : ""),
-        x: L.x - GAP / 2, y: -20000, width: L.w + GAP, height: 40000,
-      }, bands);
-    }
+    svg.setAttribute("width", W);
+    svg.setAttribute("height", H);
 
     const heads = el("g", {}, vp);
     for (const L of layers) {
@@ -222,12 +220,10 @@
       }
     }
 
-    coldG = el("g", { class: "cold" }, vp);
     for (const e of edges) {
       e.d = edgePath(e);
-      e.el = el("path", { class: "edge", d: e.d }, coldG);
+      e.p = new Path2D(e.d);
     }
-    hotG = el("g", { class: "hot" }, vp);
 
     nodeG = el("g", {}, vp);
     for (const n of nodes) {
@@ -243,6 +239,7 @@
       el("circle", { class: "dot", r: n.r }, g);
       el("text", { x: MARK, dy: "0.35em" }, g).textContent = n.label;
       n.el = g;
+      n.painted = null;
     }
   }
 
@@ -267,17 +264,29 @@
   const stage = $("#stage");
   const LEGEND_CLEARANCE = 64;
 
-  function box() { return svg.getBoundingClientRect(); }
+  // Sizes are measured once and cached. Reading them during a drag would
+  // force the browser to recompute layout on every frame, right after the
+  // previous frame changed it.
+  const canvas = $(".canvas");
+  let size = { left: 0, top: 0, width: 1, height: 1 };
+  let cover = { w: 0, h: 0 };
+  function measureCanvas() {
+    const r = canvas.getBoundingClientRect();
+    size = { left: r.left, top: r.top, width: r.width, height: r.height };
+  }
+  function measureCover() {
+    const open = panel.classList.contains("open");
+    cover = {
+      w: open && !narrow() ? panel.offsetWidth : 0,
+      h: open && narrow() ? panel.offsetHeight : 0,
+    };
+  }
+  function box() { return size; }
 
   // The part of the canvas the map can use: the detail panel covers the
   // right edge on desktop and the bottom on phones.
   function room() {
-    const r = box();
-    const open = panel.classList.contains("open");
-    return {
-      w: r.width - (open && !narrow() ? panel.offsetWidth : 0),
-      h: r.height - (open && narrow() ? panel.offsetHeight : 0),
-    };
+    return { w: size.width - cover.w, h: size.height - cover.h };
   }
 
   // Zooming out stops once the whole map fits; past that there is nothing
@@ -305,12 +314,84 @@
 
   function apply() {
     clampView(view);
-    vp.setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
+    svg.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.k})`;
     for (const L of layers) {
       if (!L.lane) continue;
       L.lane.style.transform = `translateX(${(L.x - 6) * view.k + view.x}px)`;
       L.lane.style.maxWidth = Math.max(0, (L.w + GAP) * view.k - 14) + "px";
     }
+    draw();
+  }
+
+  /* ---------------- curves ---------------- */
+
+  // The 522 curves and the column bands are painted on a canvas under the
+  // svg labels. As svg they were almost the entire cost of every repaint:
+  // hundreds of faint, overlapping, map-wide strokes blended pixel by pixel.
+  // The canvas is screen-sized, so only visible pixels are drawn, and curves
+  // that are entirely off screen are skipped.
+  const edgeCanvas = $("#edges");
+  const ectx = edgeCanvas.getContext("2d");
+  const ink = {};
+  const HOT = { up: [2.1, 0.7], down: [2.1, 0.75], path: [2.8, 0.9] };
+  const EDGE_WIDTH = 1.5;
+  let tracing = false, hotList = [];
+
+  function readInk() {
+    const s = getComputedStyle(document.documentElement);
+    for (const k of ["band", "edge", "up", "down", "path"]) ink[k] = s.getPropertyValue("--" + k).trim();
+    ink.edgeAlpha = parseFloat(s.getPropertyValue("--edge-alpha")) || 0.075;
+  }
+
+  function draw() {
+    if (!edges.length || !edges[0].p) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.round(size.width * dpr), h = Math.round(size.height * dpr);
+    if (edgeCanvas.width !== w || edgeCanvas.height !== h) { edgeCanvas.width = w; edgeCanvas.height = h; }
+    ectx.setTransform(1, 0, 0, 1, 0, 0);
+    ectx.clearRect(0, 0, w, h);
+    const k = view.k;
+    ectx.setTransform(dpr * k, 0, 0, dpr * k, dpr * view.x, dpr * view.y);
+    const x0 = -view.x / k, y0 = -view.y / k;
+    const x1 = x0 + size.width / k, y1 = y0 + size.height / k;
+    const visible = (e) => e.box[2] >= x0 && e.box[0] <= x1 && e.box[3] >= y0 && e.box[1] <= y1 && seen(e.s) && seen(e.t);
+
+    ectx.fillStyle = ink.band;
+    for (const L of layers) if (L.i % 2) ectx.fillRect(L.x - GAP / 2, 0, L.w + GAP, H);
+
+    // Every curve is stroked exactly one device pixel wide. The graphics
+    // engine has a dedicated fast path for one-pixel lines that is about
+    // twenty times quicker than anything wider, and the curves were always
+    // just over that width. To keep the same amount of ink on screen, the
+    // background curves get darker in proportion to the width they lost,
+    // and highlighted curves are built from several one-pixel passes laid
+    // side by side.
+    const device = dpr * k;
+    const px = 1 / device;
+    ectx.lineWidth = px;
+    const lost = Math.max(1, EDGE_WIDTH * device);
+    const alpha = Math.min(0.3, ink.edgeAlpha * lost) * (tracing ? 0.35 : 1);
+    ectx.strokeStyle = `rgba(${ink.edge},${alpha})`;
+    for (const e of edges) if (visible(e)) ectx.stroke(e.p);
+
+    for (const [e, cls] of hotList) {
+      if (!visible(e)) continue;
+      const passes = Math.min(4, Math.max(1, Math.round(HOT[cls][0] * device)));
+      ectx.strokeStyle = ink[cls];
+      ectx.globalAlpha = HOT[cls][1];
+      for (let i = 0; i < passes; i++) {
+        const o = (i - (passes - 1) / 2) * 0.8;
+        ectx.setTransform(device, 0, 0, device, dpr * view.x + o, dpr * view.y + o);
+        ectx.stroke(e.p);
+      }
+    }
+    ectx.setTransform(device, 0, 0, device, dpr * view.x, dpr * view.y);
+    ectx.globalAlpha = 1;
+  }
+
+  let drawQueued = 0;
+  function requestDraw() {
+    if (!drawQueued) drawQueued = requestAnimationFrame(() => { drawQueued = 0; draw(); });
   }
 
   function zoomAt(cx, cy, f) {
@@ -320,7 +401,14 @@
     view.x = px - ((px - view.x) / view.k) * k;
     view.y = py - ((py - view.y) / view.k) * k;
     view.k = k;
-    apply();
+    schedule();
+  }
+
+  // Input can arrive faster than the screen refreshes, so pointer and wheel
+  // handlers only update the numbers and the map is moved once per frame.
+  let queued = 0;
+  function schedule() {
+    if (!queued) queued = requestAnimationFrame(() => { queued = 0; apply(); });
   }
 
   function home() {
@@ -383,11 +471,11 @@
   // Selection is decided on pointerup rather than click: pointer capture
   // retargets the click to the svg, and a drag that started on a label must
   // not count as choosing it.
-  svg.addEventListener("pointerdown", (e) => {
+  canvas.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     cancelAnimationFrame(anim);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    try { svg.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
     if (pointers.size === 1) {
       press = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, node: nodeAt(e.target), shift: e.shiftKey, moved: false };
     } else if (pointers.size === 2) {
@@ -396,7 +484,7 @@
     }
   });
 
-  svg.addEventListener("pointermove", (e) => {
+  canvas.addEventListener("pointermove", (e) => {
     if (!pointers.has(e.pointerId)) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pinch && pointers.size >= 2) {
@@ -407,13 +495,13 @@
       view.k = k;
       view.x = now.cx - r.left - wx * k;
       view.y = now.cy - r.top - wy * k;
-      apply();
+      schedule();
       return;
     }
     if (!press) return;
     const dx = e.clientX - press.x, dy = e.clientY - press.y;
-    if (!press.moved && Math.hypot(dx, dy) > 4) { press.moved = true; svg.classList.add("dragging"); }
-    if (press.moved) { view.x = press.vx + dx; view.y = press.vy + dy; apply(); }
+    if (!press.moved && Math.hypot(dx, dy) > 4) { press.moved = true; canvas.classList.add("dragging"); }
+    if (press.moved) { view.x = press.vx + dx; view.y = press.vy + dy; schedule(); }
   });
 
   function release(e) {
@@ -427,11 +515,11 @@
     if (pointers.size === 0) {
       if (press && !press.moved && e.type === "pointerup") tap(press.node, press.shift);
       press = null;
-      svg.classList.remove("dragging");
+      canvas.classList.remove("dragging");
     }
   }
-  svg.addEventListener("pointerup", release);
-  svg.addEventListener("pointercancel", release);
+  canvas.addEventListener("pointerup", release);
+  canvas.addEventListener("pointercancel", release);
 
   // Mouse wheels zoom and trackpads pan. Browsers do not say which device
   // sent a wheel event, so this guesses: pinch gestures arrive with ctrlKey,
@@ -440,7 +528,7 @@
   // looked like a trackpad, the events that follow it keep panning.
   const SMOOTH_MS = 533;
   let smoothUntil = 0;
-  svg.addEventListener("wheel", (e) => {
+  canvas.addEventListener("wheel", (e) => {
     // Embedded in a blog post, a plain scroll belongs to the page around it.
     if (embed && !e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
@@ -453,19 +541,28 @@
     const notch = !smooth && now > smoothUntil;
     if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, Math.exp(-dy * 0.01));
     else if (notch) zoomAt(e.clientX, e.clientY, Math.exp(-dy * 0.0016));
-    else { view.x -= dx; view.y -= dy; apply(); }
+    else { view.x -= dx; view.y -= dy; schedule(); }
   }, { passive: false });
 
+  // Leaving one label usually means entering the next, so clearing the trace
+  // waits a frame; if another label is entered first, the clear never runs
+  // and the map goes straight from one trace to the other.
+  let unhover = 0;
   vp.addEventListener("pointerover", (e) => {
     if (e.pointerType === "touch" || press) return;
     const n = nodeAt(e.target);
-    if (n && n !== state.hover) { state.hover = n; used(); if (!state.focus) refresh(); }
+    if (!n) return;
+    cancelAnimationFrame(unhover);
+    if (n !== state.hover) { state.hover = n; used(); if (!state.focus) refresh(); }
   });
   vp.addEventListener("pointerout", (e) => {
     const n = nodeAt(e.target);
     if (!n || nodeAt(e.relatedTarget) === n) return;
-    state.hover = null;
-    if (!state.focus) refresh();
+    cancelAnimationFrame(unhover);
+    unhover = requestAnimationFrame(() => {
+      state.hover = null;
+      if (!state.focus) refresh();
+    });
   });
 
   /* ---------------- tracing ---------------- */
@@ -473,21 +570,25 @@
   const state = { focus: null, target: null, hover: null, mode: "full", picking: false };
 
   function paint(classes, hot, focus) {
-    svg.classList.toggle("tracing", classes.size > 0);
+    tracing = classes.size > 0;
+    svg.classList.toggle("tracing", tracing);
+    // Only concepts whose state changed are touched, so sweeping the pointer
+    // across labels restyles a handful of elements instead of all of them.
     for (const n of nodes) {
       const c = classes.get(n);
+      const key = (c || "") + (focus.includes(n) ? "|focus" : "");
+      if (n.painted === key) continue;
+      n.painted = key;
       n.el.classList.toggle("on", !!c);
       n.el.classList.toggle("up", c === "up");
       n.el.classList.toggle("down", c === "down");
       n.el.classList.toggle("path", c === "path");
       n.el.classList.toggle("focus", focus.includes(n));
     }
-    hotG.textContent = "";
     // Downstream first so the upstream lines, usually the point, sit on top.
     hot.sort((a, b) => (a[1] === "up") - (b[1] === "up"));
-    for (const [e, cls] of hot) {
-      if (seen(e.s) && seen(e.t)) el("path", { class: "edge " + cls, d: e.d }, hotG);
-    }
+    hotList = hot;
+    requestDraw();
   }
 
   function traceSets(n) {
@@ -663,11 +764,13 @@
     panel.classList.add("open");
     stage.classList.add("panel-open");
     panel.scrollTop = 0;
+    measureCover();
   }
   function closePanel() {
     const was = panel.classList.contains("open");
     panel.classList.remove("open");
     stage.classList.remove("panel-open");
+    measureCover();
     if (was) animateTo({ ...view });
   }
 
@@ -800,7 +903,6 @@
       n.el.classList.toggle("future", !seen(n));
       n.el.classList.toggle("fresh", dated && born(n) === era);
     }
-    for (const e of edges) e.el.classList.toggle("future", !seen(e.s) || !seen(e.t));
     for (const L of layers) {
       const shown = L.nodes.filter(seen).length;
       L.lane.querySelector(".count").textContent = dated ? `${shown}/${L.nodes.length}` : L.nodes.length;
@@ -969,7 +1071,10 @@
     const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     root.dataset.theme = dark ? "light" : "dark";
     try { localStorage.setItem("dsmai-theme", root.dataset.theme); } catch (e) { /* private mode */ }
+    readInk();
+    draw();
   });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readInk(); draw(); });
 
   // Arrow keys walk the map: up and down within a column, left to the
   // closest thing a concept is built on, right to the closest thing built on
@@ -1021,6 +1126,8 @@
   let built = false;
   function build() {
     measure();
+    measureCanvas();
+    readInk();
     layout();
     render();
     if (!built) { renderLanes(); buildIndex(); }
@@ -1043,5 +1150,5 @@
   fontsReady.then(() => { settled = true; build(); }).catch(() => { if (!built) build(); });
   setTimeout(() => { if (!settled && !built) build(); }, 1533);
 
-  window.addEventListener("resize", apply);
+  window.addEventListener("resize", () => { measureCanvas(); measureCover(); apply(); });
 })();

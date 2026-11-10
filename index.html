@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#1e4a33">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/map.css?v=5">
+<link rel="stylesheet" href="assets/css/map.css?v=14">
 <script>
   try { var t = localStorage.getItem("dsmai-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
@@ -45,6 +45,7 @@
 <main class="stage" id="stage">
   <div class="lanes" id="lanes" aria-hidden="true"></div>
   <div class="canvas">
+    <canvas id="edges" aria-hidden="true"></canvas>
     <svg id="map" role="img" aria-label="Layered dependency map of AI concepts">
       <g id="viewport"></g>
     </svg>
@@ -95,7 +96,7 @@
 </main>
 
 <noscript><p class="nojs">This map needs JavaScript to draw.</p></noscript>
-<script src="assets/js/data.js?v=5"></script>
-<script src="assets/js/map.js?v=5"></script>
+<script src="assets/js/data.js?v=14"></script>
+<script src="assets/js/map.js?v=14"></script>
 </body>
 </html>

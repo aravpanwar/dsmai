@@ -6,7 +6,7 @@
   --paper:#faf8f2; --band:#f3efe5; --field:#f1ede3;
   --ink:#141414; --ink-2:#45423d; --muted:#6b6862; --line:#e7e2d8;
   --accent:#1e6a45; --ochre:#d9a441;
-  --edge:rgba(20,20,20,.075);
+  --edge:20,20,20; --edge-alpha:.075; --faint:#cdc8bd; --ghost:#ebe7dc;
   --up:#1e6a45; --down:#b5781a; --path:#a6402a;
   --shadow:0 10px 30px rgba(30,26,18,.10), 0 1px 2px rgba(30,26,18,.06);
 
@@ -21,7 +21,7 @@
   :root:not([data-theme="light"]){
     --paper:#111412; --band:#151a16; --field:#1a201b;
     --ink:#ece7db; --ink-2:#c9c3b6; --muted:#8f8a80; --line:#262c27;
-    --accent:#6cc495; --edge:rgba(236,231,219,.06);
+    --accent:#6cc495; --edge:236,231,219; --edge-alpha:.06; --faint:#3b413c; --ghost:#1b201c;
     --up:#6cc495; --down:#e2b155; --path:#ef8a6a;
     --shadow:0 10px 30px rgba(0,0,0,.45);
     --rail-bg:#173326; --rail-line:rgba(255,255,255,.14);
@@ -33,7 +33,7 @@
 :root[data-theme="dark"]{
   --paper:#111412; --band:#151a16; --field:#1a201b;
   --ink:#ece7db; --ink-2:#c9c3b6; --muted:#8f8a80; --line:#262c27;
-  --accent:#6cc495; --edge:rgba(236,231,219,.06);
+  --accent:#6cc495; --edge:236,231,219; --edge-alpha:.06; --faint:#3b413c; --ghost:#1b201c;
   --up:#6cc495; --down:#e2b155; --path:#ef8a6a;
   --shadow:0 10px 30px rgba(0,0,0,.45);
   --rail-bg:#173326; --rail-line:rgba(255,255,255,.14);
@@ -116,24 +116,17 @@ a{ color:var(--accent); }
 .lane::after{ content:""; position:absolute; left:0; bottom:0; width:22px; height:2px; background:var(--c); }
 
 .canvas{ position:relative; flex:1; min-height:0; }
-#map{ position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
-#map.dragging{ cursor:grabbing; }
+.canvas{ overflow:hidden; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+.canvas.dragging{ cursor:grabbing; }
+#map{ position:absolute; left:0; top:0; display:block; overflow:visible; transform-origin:0 0; }
 
 /* ---------- svg ---------- */
-.band{ fill:transparent; }
-.band.alt{ fill:var(--band); }
 .ghead text{ font-family:var(--head); font-size:9.5px; font-weight:650; letter-spacing:.1em; text-transform:uppercase; fill:var(--muted); }
-.ghead line{ stroke:var(--line); stroke-width:1; vector-effect:non-scaling-stroke; }
+.ghead line{ stroke:var(--line); stroke-width:1.2; }
 
-.edge{ fill:none; stroke:var(--edge); stroke-width:1; vector-effect:non-scaling-stroke; }
-.cold{ transition:opacity .2s ease; }
-#map.tracing .cold{ opacity:.35; }
-.hot .edge{ stroke-width:1.4; }
-.hot .edge.up{ stroke:var(--up); stroke-opacity:.7; }
-.hot .edge.down{ stroke:var(--down); stroke-opacity:.75; }
-.hot .edge.path{ stroke:var(--path); stroke-opacity:.9; stroke-width:1.9; }
+#edges{ position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
 
-.node{ cursor:pointer; --halo:var(--paper); transition:opacity .15s ease; }
+.node{ cursor:pointer; --halo:var(--paper); }
 .node.alt{ --halo:var(--band); }
 .node .hit{ fill:transparent; }
 .node text{
@@ -142,15 +135,16 @@ a{ color:var(--accent); }
 }
 .node.field text{ font-size:15px; font-weight:700; letter-spacing:-.2px; }
 .node .dot{ fill:var(--c); }
-.node .ring{ fill:none; stroke:var(--ink); stroke-width:1.3; opacity:0; vector-effect:non-scaling-stroke; }
+.node .ring{ fill:none; stroke:var(--ink); stroke-width:1.6; display:none; }
 .node:hover text{ fill:var(--accent); }
-#map.tracing .node{ opacity:.2; }
-#map.tracing .node.on{ opacity:1; }
+/* dimming swaps colours rather than fading opacity: an opacity below 1 on
+   each of 200 svg groups makes the browser paint each one as its own layer */
+#map.tracing .node:not(.on) text,#map.tracing .node:not(.on) .dot{ fill:var(--faint); }
 .node.up .dot{ fill:var(--up); }
 .node.down .dot{ fill:var(--down); }
 .node.path .dot{ fill:var(--path); }
 .node.focus text{ font-weight:750; }
-.node.focus .ring{ opacity:1; }
+.node.focus .ring{ display:inline; }
 
 /* ---------- legend + zoom ---------- */
 .legend{
@@ -199,15 +193,15 @@ a{ color:var(--accent); }
   .timeline,.stage.panel-open .timeline{ right:auto; left:16px; bottom:74px; }
 }
 
-#map.dated .cold .edge.future{ display:none; }
-#map.dated .node.future{ opacity:.07; pointer-events:none; }
+#map.dated .node.future{ pointer-events:none; }
+#map.dated .node.future text,#map.dated .node.future .dot{ fill:var(--ghost); }
 #map.dated .node.fresh text{ fill:var(--down); font-weight:750; }
-#map.dated .node.fresh .ring{ opacity:1; stroke:var(--down); }
+#map.dated .node.fresh .ring{ display:inline; stroke:var(--down); }
 
 /* ---------- embed ---------- */
 .caption,.embed-link{ display:none; }
 .embed .top,.embed .legend,.embed .panel,.embed .index,.embed .timeline{ display:none !important; }
-.embed #map{ touch-action:pan-y pinch-zoom; }
+.embed .canvas{ touch-action:pan-y pinch-zoom; }
 .embed .caption:not([hidden]){
   display:flex; flex-direction:column; gap:2px; position:absolute; left:12px; bottom:12px; z-index:3; margin:0;
   padding:8px 12px; background:var(--paper); border:1px solid var(--line); box-shadow:var(--shadow); font-family:var(--head);
