@@ -608,11 +608,11 @@
       h("p", { className: "text" }, n.text),
       h("div", { className: "stats" },
         h("div", {}, h("b", {}, String(up.size)), h("span", {}, "concepts beneath it")),
-        h("div", {}, h("b", {}, String(down.size)), h("span", {}, "built on top of it")),
+        h("div", {}, h("b", {}, String(down.size)), h("span", {}, "that depend on it")),
         h("div", {}, h("b", {}, String(depth(n))), h("span", {}, "levels in its longest chain"))),
       roots ? h("h3", {}, "The mathematics underneath") : null,
       roots,
-      h("h3", {}, "Built directly on"),
+      h("h3", {}, "Made directly on"),
       chips(n.parents, "Nothing on this map. It is a starting point."),
       h("h3", {}, "Leads directly to"),
       chips(n.children, "Nothing yet. This is where the map ends."),
@@ -639,7 +639,7 @@
         h("h2", {}, `${res.from.label} → ${res.to.label}`),
         h("p", { className: "text" }, inner.length
           ? `${inner.length} concept${one ? " sits" : "s sit"} on the dependency chains that lead from one to the other.`
-          : `${res.to.label} is built directly on ${res.from.label}.`),
+          : `${res.to.label} is made directly on ${res.from.label}.`),
         byLayer(inner),
       ];
     } else {
@@ -647,8 +647,8 @@
         h("p", { className: "kicker" }, "No direct lineage"),
         h("h2", {}, `${a.label} and ${b.label}`),
         h("p", { className: "text" }, inner.length
-          ? `Neither is built on the other, but they share ${inner.length} foundation${one ? "" : "s"}.`
-          : "Neither is built on the other, and they share no foundations on this map."),
+          ? `Neither is made on the other, but they share ${inner.length} foundation${one ? "" : "s"}.`
+          : "Neither is made on the other, and they share no foundations on this map."),
         byLayer(inner),
       ];
     }
@@ -761,7 +761,7 @@
         h("span", {}, res.from ? `${res.nodes.size - 2} concepts in between` : "no direct lineage"));
     } else {
       cap.replaceChildren(h("b", {}, a.label),
-        h("span", {}, `built on ${anc(a).size}, leads to ${desc(a).size}`));
+        h("span", {}, `made on ${anc(a).size}, leads to ${desc(a).size}`));
     }
   }
 
@@ -941,14 +941,14 @@
 
   function buildIndex() {
     const intro = h("p", { className: "ix-intro" },
-      `Every concept on the map, layer by layer. Each one lists what it is built on, so you can follow anything in modern AI back to the mathematics underneath. Pick one to see it in place.`);
+      `Every concept on the map, layer by layer. Each one lists what it is made on, so you can follow anything in modern AI back to the mathematics underneath. Pick one to see it in place.`);
     const sections = layers.map((L) => h("section", { className: "ix-layer", style: `--c:var(--l${L.i})` },
       h("header", {}, h("span", { className: "num" }, `${pad2(L.i)} / ${pad2(layers.length - 1)}`), h("h2", {}, L.name), h("p", {}, L.note)),
       h("div", { className: "ix-groups" }, L.groups.map((g) => h("div", { className: "ix-group" },
         h("h3", {}, g.name),
         L.nodes.filter((n) => n.group === g.name).map((n) => h("button", { type: "button", className: "ix-item", on: () => { showView("map"); select(n, { center: true }); } },
           h("b", {}, n.label), h("span", {}, n.text),
-          n.parents.length ? h("small", {}, "Built on " + listing(n.parents.map((p) => p.label))) : null)))))));
+          n.parents.length ? h("small", {}, "Made on " + listing(n.parents.map((p) => p.label))) : null)))))));
     index.replaceChildren(intro, ...sections);
   }
 
@@ -1017,9 +1017,6 @@
   });
 
   /* ---------------- boot ---------------- */
-
-  $("#sub").textContent =
-    `${nodes.length} concepts and ${edges.length} dependencies in ${layers.length} layers, from linear algebra to agents.`;
 
   let built = false;
   function build() {
