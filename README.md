@@ -1,5 +1,7 @@
 # Dependency Structure of Modern AI
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24157574.svg)](https://doi.org/10.5281/zenodo.24157574)
+
 An interactive map of 211 AI concepts and the 522 dependencies between them, in eight layers from mathematics to applications.
 
 **Live:** https://dsmai.aravpanwar.com/
