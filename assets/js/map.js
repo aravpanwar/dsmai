@@ -738,7 +738,7 @@
       body = [
         h("p", { className: "kicker" }, "Path"),
         h("h2", {}, `${res.from.label} → ${res.to.label}`),
-        h("p", { className: "text" }, inner.length
+        h("p", { className: "text summary" }, inner.length
           ? `${inner.length} concept${one ? " sits" : "s sit"} on the dependency chains that lead from one to the other.`
           : `${res.to.label} is made directly on ${res.from.label}.`),
         byLayer(inner),
@@ -747,7 +747,7 @@
       body = [
         h("p", { className: "kicker" }, "No direct lineage"),
         h("h2", {}, `${a.label} and ${b.label}`),
-        h("p", { className: "text" }, inner.length
+        h("p", { className: "text summary" }, inner.length
           ? `Neither is made on the other, but they share ${inner.length} foundation${one ? "" : "s"}.`
           : "Neither is made on the other, and they share no foundations on this map."),
         byLayer(inner),
@@ -759,8 +759,41 @@
     openPanel();
   }
 
+  // On a phone the panel is a bottom sheet, and at full height it leaves the
+  // map a thin strip. So it opens short, showing only the name, and the rest
+  // is a tap or swipe away. Once expanded it stays expanded while people
+  // follow chips from concept to concept, and only resets when it closes.
+  const grip = $("#grip");
+  function peek(on) {
+    panel.classList.toggle("peek", on);
+    grip.setAttribute("aria-expanded", String(!on));
+    grip.setAttribute("aria-label", on ? "Show details" : "Hide details");
+  }
+  function togglePeek() {
+    peek(!panel.classList.contains("peek"));
+    panel.scrollTop = 0;
+    measureCover();
+    animateTo({ ...view });
+  }
+  grip.addEventListener("click", (e) => { e.stopPropagation(); togglePeek(); });
+  panel.addEventListener("click", (e) => {
+    if (narrow() && panel.classList.contains("peek") && !e.target.closest("a,button")) togglePeek();
+  });
+  let swipe = null;
+  panel.addEventListener("touchstart", (e) => {
+    swipe = { y: e.touches[0].clientY, top: panel.scrollTop };
+  }, { passive: true });
+  panel.addEventListener("touchend", (e) => {
+    if (!swipe || !narrow()) return;
+    const dy = e.changedTouches[0].clientY - swipe.y;
+    const short = panel.classList.contains("peek");
+    if ((short && dy < -30) || (!short && swipe.top <= 0 && dy > 40)) togglePeek();
+    swipe = null;
+  }, { passive: true });
+
   function openPanel() {
     if (embed) return;
+    if (!panel.classList.contains("open")) peek(true);
     panel.classList.add("open");
     stage.classList.add("panel-open");
     panel.scrollTop = 0;

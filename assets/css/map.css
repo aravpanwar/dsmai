@@ -239,6 +239,7 @@ a.icon{ flex:none; text-decoration:none; }
   border-radius:2px; background:none; color:var(--rail-muted); font-size:20px; line-height:1; cursor:pointer;
 }
 .close:hover{ color:var(--rail-ink); border-color:var(--rail-ink); }
+.grip{ display:none; }
 .kicker{ font-family:var(--head); font-size:12px; font-weight:700; color:var(--ochre); margin:0 40px 10px 0; }
 .kicker .n{ opacity:.8; }
 .panel h2{ font-family:var(--head); font-size:30px; font-weight:750; letter-spacing:-.8px; line-height:1.04; margin:0 0 12px; }
@@ -314,8 +315,15 @@ a.icon{ flex:none; text-decoration:none; }
   #eraOut{ font-size:19px; min-width:44px; }
   .zoom{ right:10px; bottom:10px; }
   .stage.panel-open .zoom{ right:10px; }
-  .panel{ top:auto; left:0; width:auto; max-height:64%; padding:22px 18px 32px; transform:translateY(100%); border-top:3px solid var(--ochre); }
+  .panel{ top:auto; left:0; width:auto; max-height:64%; padding:8px 18px 32px; transform:translateY(100%); border-top:3px solid var(--ochre); }
   .panel h2{ font-size:25px; }
+  .grip{ display:block; position:relative; width:100%; height:24px; margin:0 0 6px; padding:0; border:0; background:none; cursor:pointer; }
+  .grip::before{ content:""; position:absolute; left:50%; top:8px; width:40px; height:4px; margin-left:-20px; border-radius:2px; background:var(--rail-line); }
+  .grip:focus-visible{ outline:2px solid var(--ochre); outline-offset:-2px; }
+  .panel.peek{ overflow:hidden; padding-bottom:16px; cursor:pointer; }
+  .panel.peek #detail > :not(.kicker):not(h2):not(.meta):not(.summary){ display:none; }
+  .panel.peek h2{ margin-bottom:8px; }
+  .panel.peek .meta,.panel.peek .summary{ margin-bottom:0; }
   .index{ padding:28px 16px 80px; }
   .ix-layer{ grid-template-columns:1fr; gap:14px; }
 }
