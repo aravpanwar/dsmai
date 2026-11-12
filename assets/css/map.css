@@ -105,7 +105,7 @@ a.icon{ flex:none; text-decoration:none; }
 .icon:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
 /* ---------- stage ---------- */
-.stage{ position:relative; flex:1; min-height:0; display:flex; flex-direction:column; }
+.stage{ position:relative; flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; overflow:clip; }
 .lanes{ position:relative; height:40px; flex:none; overflow:hidden; border-bottom:1px solid var(--line); background:var(--paper); }
 .lane{
   position:absolute; left:0; top:0; height:100%; display:flex; align-items:center; gap:7px;
