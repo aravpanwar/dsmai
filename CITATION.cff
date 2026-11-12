@@ -6,6 +6,8 @@ abstract: >-
   them, tracing LLMs, computer vision and generative models back through
   architectures, learning methods, software, hardware and mathematics.
 type: software
+version: 1.0.0
+date-released: 2026-11-12
 authors:
   - family-names: Panwar
     given-names: Arav

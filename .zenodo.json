@@ -1,0 +1,28 @@
+{
+  "title": "Dependency Structure of Modern AI",
+  "description": "A layered map of 211 concepts in modern AI and the 522 dependencies between them, tracing LLMs, computer vision and generative models back through architectures, learning methods, software, hardware and mathematics. Interactive version: https://dsmai.aravpanwar.com/",
+  "upload_type": "software",
+  "version": "1.0.0",
+  "creators": [
+    {
+      "name": "Panwar, Arav",
+      "orcid": "0009-0009-3013-5970"
+    }
+  ],
+  "license": "mit",
+  "notes": "The code is MIT licensed. The concept data in assets/js/data.js is licensed under CC BY 4.0. The bundled font, Schibsted Grotesk, is under the SIL Open Font License 1.1.",
+  "keywords": [
+    "artificial intelligence",
+    "machine learning",
+    "concept map",
+    "dependency graph",
+    "education"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://dsmai.aravpanwar.com/",
+      "relation": "isSupplementedBy",
+      "resource_type": "other"
+    }
+  ]
+}
