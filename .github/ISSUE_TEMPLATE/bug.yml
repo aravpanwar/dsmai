@@ -1,0 +1,23 @@
+name: Site bug
+description: Something on the map doesn't work or looks broken.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. A screenshot helps.
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Browser and device
+      description: For example Chrome on Windows, Safari on iPhone.
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Link
+      description: The address from the address bar, if a concept or path was open.

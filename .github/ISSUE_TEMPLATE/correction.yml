@@ -1,0 +1,40 @@
+name: Correction or addition
+description: A wrong year, description, link or dependency, or a concept that should be on the map.
+labels: [data]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of change
+      options:
+        - Something is wrong (year, description, link)
+        - A dependency is missing or wrong
+        - A concept should be added
+        - A concept should be removed or merged
+    validations:
+      required: true
+  - type: input
+    id: concept
+    attributes:
+      label: Concept
+      description: The concept as it appears on the map, or its id from the address bar (for example transformer).
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: What should change
+      description: What it says now, and what it should say.
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source
+      description: A paper, book or page that backs this up.
+  - type: checkboxes
+    id: pr
+    attributes:
+      label: Pull request
+      options:
+        - label: I'd like to make this change myself once the issue is approved.

@@ -15,7 +15,9 @@
   const PAD_TOP = 24;
   const MARK = 13;
   const SWEEPS = 23;
-  const K_MIN = 0.2, K_MAX = 2.5;
+  // The floor only matters where fitting the whole map needs less than it:
+  // a 390px phone needs about 0.16.
+  const K_MIN = 0.1, K_MAX = 2.5;
 
   const HEAD = '"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif';
   const isField = (n) => n.L.id === "fields";
@@ -325,7 +327,7 @@
 
   /* ---------------- curves ---------------- */
 
-  // The 522 curves and the column bands are painted on a canvas under the
+  // The 630 curves and the column bands are painted on a canvas under the
   // svg labels. As svg they were almost the entire cost of every repaint:
   // hundreds of faint, overlapping, map-wide strokes blended pixel by pixel.
   // The canvas is screen-sized, so only visible pixels are drawn, and curves
@@ -536,7 +538,12 @@
     const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1;
     const dx = e.deltaX * unit, dy = e.deltaY * unit;
     const now = performance.now();
-    const smooth = e.deltaMode === 0 && (dx !== 0 || !Number.isInteger(dy) || Math.abs(dy) < 50);
+    // Chrome divides wheel deltas by the page's pixel ratio, so at 150%
+    // display scaling a 100px notch arrives as 66.67. Scaling back first keeps
+    // those notches whole numbers; trackpad deltas stay fractional.
+    const raw = dy * (window.devicePixelRatio || 1);
+    const whole = Math.abs(raw - Math.round(raw)) < 0.01;
+    const smooth = e.deltaMode === 0 && (dx !== 0 || !whole || Math.abs(dy) < 50);
     if (smooth) smoothUntil = now + SMOOTH_MS;
     const notch = !smooth && now > smoothUntil;
     if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, Math.exp(-dy * 0.01));
@@ -670,7 +677,7 @@
     return h("div", { className: "chips" }, list.slice().sort(byPlace).map(chip));
   }
 
-  const refLabel = (url) => (/arxiv\.org|nature\.com/.test(url) ? "Read the paper" : "Project site");
+  const refLabel = (url) => (/arxiv\.org|nature\.com|doi\.org|\.pdf$/.test(url) ? "Read the paper" : "Project site");
 
   function listing(words) {
     if (words.length < 2) return words.join("");
@@ -985,6 +992,16 @@
   }
 
   slider.addEventListener("input", () => { stop(); setEra(yearAt(Number(slider.value))); });
+  // The track runs 0 to 1000 for smooth dragging, so a native arrow step is
+  // a fraction of a year; keys step whole years instead (ten with Page keys).
+  const SPAN = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1, PageDown: -10, PageUp: 10 };
+  slider.addEventListener("keydown", (e) => {
+    const y = e.key === "Home" ? 1940 : e.key === "End" ? LAST : e.key in SPAN ? Math.min(LAST, Math.max(1940, era + SPAN[e.key])) : null;
+    if (y === null) return;
+    e.preventDefault();
+    stop();
+    setEra(y);
+  });
   playBtn.addEventListener("click", play);
   $("#timeBtn").addEventListener("click", () => openTimeline(bar.hidden));
   $("#eraClose").addEventListener("click", () => openTimeline(false));
@@ -995,7 +1012,11 @@
     else if (a) select(a, { center: true, instant });
     return !!a;
   }
-  window.addEventListener("hashchange", () => readMarker(false));
+  // An emptied hash (editing the address bar, or Back to the bare page)
+  // means nothing is selected any more.
+  window.addEventListener("hashchange", () => {
+    if (!readMarker(false) && state.focus) clear();
+  });
 
   /* ---------------- search ---------------- */
 
@@ -1139,7 +1160,10 @@
 
   document.addEventListener("keydown", (e) => {
     const typing = document.activeElement === q;
-    if (e.key.startsWith("Arrow") && !typing && index.hidden && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    // Form controls keep their own arrow keys: the timeline slider steps
+    // through years with them.
+    const field = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName);
+    if (e.key.startsWith("Arrow") && !field && index.hidden && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
       walk(e.key);
       return;

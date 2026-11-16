@@ -94,6 +94,8 @@
       text: "Choose the parameters that make the observed data most probable. Minimising cross-entropy loss is maximum likelihood in disguise, which is how almost every model is trained." },
     { id: "bayesian", label: "Bayesian inference", needs: ["conditional"], aka: "prior posterior",
       text: "Treat parameters as uncertain and update a prior into a posterior as data arrives. L2 regularisation is a Gaussian prior in disguise, and Bayesian ideas are behind most uncertainty estimates." },
+    { id: "varinf", label: "Variational inference", year: 1999, needs: ["bayesian", "kl", "graphical"], aka: "elbo variational bayes",
+      text: "Turn an intractable posterior into an optimisation: pick a simpler distribution and pull it towards the true one by maximising a bound (the ELBO). VAEs and diffusion models are trained on such bounds." },
     { id: "leastsq", label: "Least squares", needs: ["projections", "mle"],
       text: "Fit a line or hyperplane by minimising squared errors, which is a projection onto the column space. It is also maximum likelihood when the noise is Gaussian." },
     { id: "biasvar", label: "Bias-variance tradeoff", needs: ["expectation"], aka: "overfitting underfitting",
@@ -111,6 +113,8 @@
       text: "Optimise under constraints by folding them into the objective. The dual form of the support vector machine, which makes the kernel trick possible, comes from here." },
     { id: "minimax", label: "Minimax and game theory", needs: ["probability"], aka: "nash equilibrium zero sum",
       text: "Choosing the best move assuming an opponent does the same. Chess engines search a minimax tree, and a GAN is a two-player minimax game." },
+    { id: "dynprog", label: "Dynamic programming", year: 1957, needs: ["graphs"], aka: "bellman viterbi memoisation",
+      text: "Solve a big problem by solving overlapping smaller ones once and reusing the answers. Bellman's idea behind the Viterbi decoder for HMMs, value iteration in reinforcement learning, and CTC." },
   ]);
 
   add("math", "Information theory", [
@@ -120,7 +124,7 @@
       text: "The cost of encoding data from one distribution with a code built for another. The standard loss for classification and language modelling." },
     { id: "kl", label: "KL divergence", year: 1951, needs: ["crossent"], aka: "kullback leibler relative entropy",
       text: "How far one distribution is from another, as extra bits. It keeps a VAE's codes close to a prior, and keeps an RLHF-tuned model close to where it started." },
-    { id: "mutualinfo", label: "Mutual information", year: 1948, needs: ["kl"], aka: "infonce",
+    { id: "mutualinfo", label: "Mutual information", year: 1948, needs: ["entropy"], aka: "infonce",
       text: "How much knowing one variable tells you about another. Contrastive objectives such as InfoNCE maximise a lower bound on it." },
   ]);
 
@@ -151,6 +155,8 @@
       text: "How fast data reaches the compute units. When generating text one token at a time, the bottleneck is reading the weights from memory, not the arithmetic." },
     { id: "interconnect", label: "Interconnects", year: 1999, needs: ["gpu"], aka: "nvlink infiniband network",
       text: "NVLink, InfiniBand and other links between accelerators. Training a frontier model on tens of thousands of GPUs is as much a networking problem as a maths one." },
+    { id: "datacentre", label: "Datacentres and power", needs: ["gpu", "interconnect"], aka: "data center power cooling gigawatt cluster",
+      text: "Buildings of tens of thousands of accelerators, with the power, cooling and networking to keep them busy. Frontier training is now planned around how many megawatts can be found." },
   ]);
 
   add("compute", "Numerics", [
@@ -169,6 +175,8 @@
   add("compute", "Distributed systems", [
     { id: "distributed", label: "Distributed computing", needs: ["interconnect"], aka: "all-reduce cluster",
       text: "Splitting work across many machines and keeping them in sync. Collective operations such as all-reduce let thousands of GPUs average their gradients." },
+    { id: "scheduler", label: "Cluster schedulers", year: 2002, needs: ["distributed"], ref: "https://slurm.schedmd.com/", aka: "slurm kubernetes job queue",
+      text: "Software such as Slurm and Kubernetes that hands out GPUs to jobs, queues the rest and restarts what fails. Every large training run is a long-lived job on one." },
   ]);
 
   add("compute", "Data", [
@@ -189,6 +197,10 @@
       text: "Find structure in unlabelled data: clusters, low-dimensional structure, density." },
     { id: "selfsup", label: "Self-supervised learning", year: 2013, needs: ["supervised", "unsupervised"], aka: "pretraining masked next token",
       text: "Make the labels from the data itself, such as the next word or a hidden image patch. How models learn from the internet without anyone labelling it." },
+    { id: "transfer", label: "Transfer learning and fine-tuning", year: 2014, needs: ["supervised", "selfsup"], ref: arxiv("1411.1792"), aka: "fine-tuning pretrained finetune",
+      text: "Start from a model trained on one task and adapt it to another, instead of training from scratch. Pretrain once on lots of data, then fine-tune cheaply: the pattern behind BERT, instruction tuning and LoRA." },
+    { id: "imitation", label: "Imitation learning", year: 1989, needs: ["supervised", "mdp"], aka: "behaviour cloning behavior cloning demonstrations",
+      text: "Learn a policy by copying demonstrations rather than from rewards. ALVINN drove a van this way in 1989; most robot learning today starts from teleoperated demonstrations." },
   ]);
 
   add("methods", "Classical models", [
@@ -196,7 +208,7 @@
       text: "Predict a number as a weighted sum of features. The baseline every other model has to beat." },
     { id: "logreg", label: "Logistic regression", year: 1958, needs: ["mle", "crossent", "convex"], aka: "sigmoid classifier",
       text: "A linear model squashed through a sigmoid to give a probability. One logistic regression is one artificial neuron." },
-    { id: "naivebayes", label: "Naive Bayes", year: 1961, needs: ["conditional", "graphical"],
+    { id: "naivebayes", label: "Naive Bayes", year: 1961, needs: ["conditional"],
       text: "Classify with Bayes' rule while assuming every feature is independent. The assumption is wrong, and it still makes a good spam filter." },
     { id: "knn", label: "k-nearest neighbours", year: 1951, needs: ["dot"], aka: "knn",
       text: "Predict from the most similar stored examples. No training at all, and the same idea returns as vector search in retrieval systems." },
@@ -208,8 +220,12 @@
       text: "Many trees, each trained on a random resample with random features, voting together. Averaging them reduces variance." },
     { id: "boosting", label: "Gradient boosting", year: 1999, needs: ["trees", "graddescent"], aka: "gbdt gbm ensemble",
       text: "Add trees one at a time, each fitting the errors of the ones before. Still the method that wins most tabular-data competitions." },
-    { id: "hmm", label: "Hidden Markov models", year: 1966, needs: ["markov", "mle", "graphical"], aka: "hmm viterbi",
+    { id: "matfact", label: "Matrix factorisation", year: 2006, needs: ["svd", "sgd", "embeddings"], aka: "collaborative filtering funk svd netflix prize",
+      text: "Fill in a sparse user-by-item matrix by learning a small vector for every user and every item. Popularised by the Netflix Prize, and the starting point of modern recommenders." },
+    { id: "hmm", label: "Hidden Markov models", year: 1966, needs: ["markov", "mle", "dynprog"], aka: "hmm viterbi",
       text: "A Markov chain over hidden states that emit observations. Speech recognition ran on HMMs for about 30 years." },
+    { id: "ngram", label: "n-gram language models", year: 1948, needs: ["markov", "mle"], aka: "ngram bigram trigram smoothing",
+      text: "Predict the next word from the previous few, using counts. Shannon generated English this way in 1948, and speech recognition and translation ran on n-grams until neural language models replaced them." },
     { id: "arima", label: "Forecasting (ARIMA)", year: 1970, needs: ["leastsq", "expectation"], aka: "time series autoregression exponential smoothing",
       text: "Classical time-series models that predict the next value from past values and past errors. Still strong baselines that deep forecasting models often fail to beat." },
   ]);
@@ -244,21 +260,29 @@
       text: "Hold out data the model never trains on, and measure it there. The only honest estimate of how a model will do in the world." },
     { id: "metrics", label: "Evaluation metrics", needs: ["hypothesis", "conditional"], aka: "accuracy precision recall auc bleu perplexity",
       text: "Accuracy, precision and recall, AUC, BLEU, perplexity. Each measures a different kind of success, and models end up tuned to whichever one gets chosen." },
+    { id: "benchmarks", label: "Benchmarks", needs: ["metrics", "labelling", "validation"], ref: arxiv("2009.03300"), aka: "mmlu glue leaderboard swe-bench evals",
+      text: "Fixed test sets that everyone reports on, from MNIST and ImageNet to GLUE, MMLU and SWE-bench. They focus a field, and get saturated or leak into training data." },
+    { id: "augment", label: "Data augmentation", year: 2003, needs: ["supervised", "rng", "regular"], aka: "augmentation crops flips mixup",
+      text: "Make more training data by transforming what you have: crops, flips, colour shifts, noise. AlexNet relied on it, and contrastive learning is built from it." },
+    { id: "lrschedule", label: "Learning-rate schedules", year: 2016, needs: ["sgd"], ref: arxiv("1608.03983"), aka: "warmup cosine decay",
+      text: "Change the step size during training: warm up slowly, then decay, often along a cosine. Large-model runs are sensitive enough to it that it is tuned as carefully as the model size." },
   ]);
 
   add("methods", "Representations", [
     { id: "embeddings", label: "Embeddings", year: 2003, needs: ["vectors", "cosine"], aka: "vector representation latent",
       text: "Represent discrete things (words, products, users) as learned vectors, placed so that similar things end up close together. The common currency of almost every modern model." },
-    { id: "contrastive", label: "Contrastive learning", needs: ["mutualinfo", "cosine", "selfsup"], year: 2020, ref: arxiv("2002.05709"), aka: "simclr infonce",
+    { id: "bm25", label: "TF-IDF and BM25", year: 1972, needs: ["vectors", "probability"], aka: "tfidf keyword lexical search",
+      text: "Score a document by how often it contains the query's words, weighted up for words that are rare overall. Decades old and still the first stage of many search systems and RAG pipelines." },
+    { id: "contrastive", label: "Contrastive learning", needs: ["mutualinfo", "cosine", "selfsup", "augment"], year: 2020, ref: arxiv("2002.05709"), aka: "simclr infonce",
       text: "Learn representations by pulling matching pairs together and pushing everything else apart. How CLIP lines up images with their captions." },
     { id: "ann", label: "Nearest-neighbour search", year: 1998, needs: ["knn", "graphs"], ref: arxiv("1603.09320"), aka: "hnsw ann vector search",
       text: "Find similar vectors among billions without comparing against all of them, using graph indexes such as HNSW or quantised clusters. Every vector database is built on it." },
   ]);
 
   add("methods", "Decision making", [
-    { id: "mdp", label: "Markov decision processes", year: 1957, needs: ["markov", "expectation"], aka: "mdp reward state action",
+    { id: "mdp", label: "Markov decision processes", year: 1957, needs: ["markov", "expectation", "dynprog"], aka: "mdp reward state action",
       text: "States, actions, rewards and transitions: the formal setup for an agent making a sequence of decisions." },
-    { id: "qlearning", label: "Q-learning", year: 1989, needs: ["mdp"], aka: "bellman equation temporal difference",
+    { id: "qlearning", label: "Q-learning", year: 1989, needs: ["mdp", "dynprog"], aka: "bellman equation temporal difference",
       text: "Learn how much future reward each action is worth, using the Bellman equation to improve estimates from other estimates." },
     { id: "policygrad", label: "Policy gradients", year: 1992, needs: ["mdp", "gradients", "montecarlo"], aka: "reinforce actor critic",
       text: "Adjust a policy's parameters directly so that actions which led to reward become more likely. The family PPO and RLHF belong to." },
@@ -274,9 +298,9 @@
   ]);
 
   add("methods", "Training at scale", [
-    { id: "dataparallel", label: "Data parallelism", year: 2012, needs: ["distributed", "sgd"], aka: "ddp fsdp",
+    { id: "dataparallel", label: "Data parallelism", year: 2012, needs: ["distributed", "sgd", "scheduler"], aka: "ddp fsdp",
       text: "Put a copy of the model on every GPU, give each a different slice of the batch, and average the gradients." },
-    { id: "modelparallel", label: "Model parallelism", year: 2012, needs: ["distributed", "matmul"], ref: arxiv("1909.08053"), aka: "model parallelism sharding",
+    { id: "modelparallel", label: "Model parallelism", year: 2012, needs: ["distributed", "matmul", "scheduler"], ref: arxiv("1909.08053"), aka: "model parallelism sharding",
       text: "Split one model across devices, by slicing its matrices or by placing layers on different GPUs, once it no longer fits on one." },
     { id: "mixedprec", label: "Mixed-precision training", year: 2017, needs: ["float", "sgd"], ref: arxiv("1710.03740"), aka: "fp16 bf16 amp",
       text: "Do most of the arithmetic in 16 bits while keeping a 32-bit master copy of the weights. Roughly twice the speed for the same accuracy." },
@@ -341,7 +365,7 @@
   add("software", "Domain libraries", [
     { id: "opencv", label: "OpenCV", needs: ["convolution", "fourier", "cpu"], year: 2000, ref: "https://opencv.org/",
       text: "The classic computer vision toolkit: filters, feature detectors, camera calibration, video input and output. Older than deep learning and still everywhere." },
-    { id: "hf", label: "Hugging Face Transformers", year: 2018, needs: ["pytorch"], ref: "https://huggingface.co/docs/transformers", aka: "huggingface hub",
+    { id: "hf", label: "Hugging Face Transformers", year: 2018, needs: ["pytorch", "transfer"], ref: "https://huggingface.co/docs/transformers", aka: "huggingface hub",
       text: "Pretrained models behind one common interface for downloading, running and fine-tuning them. Turned published checkpoints into one-line imports." },
     { id: "diffusers", label: "Diffusers", year: 2022, needs: ["pytorch"], ref: "https://huggingface.co/docs/diffusers",
       text: "Hugging Face's library of diffusion pipelines, noise schedulers and pretrained image models." },
@@ -373,6 +397,8 @@
       text: "Rescale activations to zero mean and unit variance inside the network. BatchNorm made very deep CNNs train; LayerNorm and RMSNorm do the same job in transformers." },
     { id: "residual", label: "Residual connections", needs: ["backprop"], year: 2015, aka: "skip connection",
       text: "Add each block's input to its output, so gradients have a direct path back to early layers. Without them, networks much deeper than 20 layers barely train." },
+    { id: "hopfield", label: "Hopfield nets and Boltzmann machines", year: 1982, needs: ["markov", "mcmc"], ref: "https://doi.org/10.1073/pnas.79.8.2554", aka: "energy based rbm associative memory",
+      text: "Networks that store patterns as low points of an energy function and recall them by settling downhill. Stacked restricted Boltzmann machines kicked off deep learning in 2006." },
   ]);
 
   add("arch", "Convolutional", [
@@ -406,16 +432,20 @@
   add("arch", "Generative models", [
     { id: "autoregressive", label: "Autoregressive models", needs: ["conditional", "softmax"], aka: "next token prediction",
       text: "Generate one piece at a time, each conditioned on everything before it, by factoring p(x) with the chain rule of probability. GPT and WaveNet both work this way." },
+    { id: "decoding", label: "Sampling and decoding", needs: ["softmax", "montecarlo", "autoregressive"], ref: arxiv("1904.09751"), aka: "temperature top-p top-k nucleus beam search greedy",
+      text: "How a next-token distribution becomes text: greedy picks, beam search, or sampling reshaped by temperature, top-k and top-p. The same model can be dull or rambling depending on these settings." },
     { id: "autoencoder", label: "Autoencoders", year: 1986, needs: ["mlp", "unsupervised"],
       text: "Squeeze the input through a small code and reconstruct it. The code becomes a learned, compressed representation." },
-    { id: "vae", label: "Variational autoencoders", needs: ["autoencoder", "kl", "gaussian"], year: 2013, ref: arxiv("1312.6114"), aka: "vae latent",
+    { id: "vae", label: "Variational autoencoders", needs: ["autoencoder", "kl", "gaussian", "varinf"], year: 2013, ref: arxiv("1312.6114"), aka: "vae latent",
       text: "Autoencoders whose codes are distributions, trained with a KL term so that new data can be sampled. Stable Diffusion works inside a VAE's latent space." },
     { id: "gan", label: "Generative adversarial nets", needs: ["mlp", "minimax", "crossent"], year: 2014, ref: arxiv("1406.2661"), aka: "gan generator discriminator",
       text: "A generator and a discriminator trained against each other. Sharp images, unstable training, and the best image generators until diffusion overtook them." },
-    { id: "diffusion", label: "Diffusion models", needs: ["gaussian", "markov", "odes", "mcmc"], year: 2015, ref: arxiv("1503.03585"), aka: "denoising score",
+    { id: "diffusion", label: "Diffusion models", needs: ["gaussian", "markov", "odes", "mcmc", "varinf"], year: 2015, ref: arxiv("1503.03585"), aka: "denoising score",
       text: "Gradually add noise to data, then train a network to undo each step. Sampling starts from pure noise and denoises it into an image, a sound or a video." },
     { id: "flows", label: "Flow matching", year: 2022, needs: ["jacobian", "odes"], ref: arxiv("2210.02747"), aka: "rectified flow",
       text: "Learn a smooth, invertible path from simple noise to data. Flow matching, a close cousin of diffusion, trains many current image and video models." },
+    { id: "vq", label: "Vector-quantised tokens", year: 2017, needs: ["vae", "kmeans"], ref: arxiv("1711.00937"), aka: "vq-vae neural audio codec encodec soundstream discrete tokens",
+      text: "Compress images or audio into a short sequence of codes from a learned codebook. Neural audio codecs work this way, which lets language models generate speech and music as tokens." },
   ]);
 
   add("arch", "Graph models", [
@@ -430,15 +460,15 @@
       text: "Word vectors learned from which words appear together, where king minus man plus woman lands near queen. Showed that meaning could live in geometry." },
     { id: "tokenization", label: "Tokenisation (BPE)", year: 2015, needs: ["entropy"], ref: arxiv("1508.07909"), aka: "tokenizer byte pair encoding sentencepiece",
       text: "Split text into subword pieces with byte-pair encoding, a compression algorithm. Models see tokens rather than letters, which is why they struggle to count the r's in strawberry." },
-    { id: "bert", label: "BERT", needs: ["transformer", "selfsup", "tokenization"], year: 2018, ref: arxiv("1810.04805"), aka: "encoder masked language model",
+    { id: "bert", label: "BERT", needs: ["transformer", "selfsup", "tokenization", "transfer"], year: 2018, ref: arxiv("1810.04805"), aka: "encoder masked language model",
       text: "A transformer encoder trained to fill in hidden words using context from both sides. Reset most of NLP within a year and still runs inside a great deal of search and classification." },
-    { id: "gpt", label: "GPT and decoder-only LMs", needs: ["transformer", "autoregressive", "selfsup", "tokenization", "webdata", "curation"], year: 2018, ref: arxiv("2005.14165"), aka: "generative pretrained transformer",
+    { id: "gpt", label: "GPT and decoder-only LMs", needs: ["transformer", "autoregressive", "selfsup", "tokenization", "webdata", "curation", "decoding", "lrschedule"], year: 2018, ref: "https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf", aka: "generative pretrained transformer",
       text: "A transformer trained only to predict the next token. With enough data and parameters, that one objective produces translation, coding and reasoning." },
-    { id: "scaling", label: "Scaling laws", needs: ["gpt", "leastsq", "curation"], year: 2020, ref: arxiv("2001.08361"), aka: "chinchilla compute optimal",
+    { id: "scaling", label: "Scaling laws", needs: ["gpt", "leastsq", "curation", "benchmarks", "lrschedule", "datacentre"], year: 2020, ref: arxiv("2001.08361"), aka: "chinchilla compute optimal",
       text: "Loss falls as a smooth power law in parameters, data and compute. That predictability is what justified spending hundreds of millions on a single training run." },
     { id: "incontext", label: "In-context learning", needs: ["gpt", "scaling"], year: 2020, aka: "few-shot prompt",
       text: "Large models pick up a task from examples in the prompt, with no weight updates. It made the prompt itself a programming interface." },
-    { id: "instruct", label: "Instruction tuning", year: 2021, needs: ["gpt", "supervised", "labelling"], aka: "sft supervised fine-tuning",
+    { id: "instruct", label: "Instruction tuning", year: 2021, needs: ["gpt", "supervised", "labelling", "transfer"], aka: "sft supervised fine-tuning",
       text: "Fine-tune a pretrained model on instruction and response pairs, so it follows requests instead of just continuing the text." },
     { id: "rlhf", label: "RLHF", needs: ["instruct", "ppo", "kl", "labelling"], year: 2022, ref: arxiv("2203.02155"), aka: "reinforcement learning from human feedback reward model",
       text: "Train a reward model on human preferences, then optimise the language model against it, with a KL penalty that keeps it near the original. The step that turned GPT-3-style base models into ChatGPT." },
@@ -455,7 +485,7 @@
   ]);
 
   add("models", "Vision", [
-    { id: "alexnet", label: "AlexNet", needs: ["cnn", "gpu", "cuda", "dropout", "activations", "imagenet"], year: 2012, aka: "imagenet",
+    { id: "alexnet", label: "AlexNet", needs: ["cnn", "gpu", "cuda", "dropout", "activations", "imagenet", "augment"], year: 2012, aka: "imagenet",
       text: "A CNN trained on two gaming GPUs that won the 2012 ImageNet challenge by a wide margin. The usual starting point of the deep learning era." },
     { id: "resnet", label: "ResNet", needs: ["cnn", "residual", "norm", "imagenet"], year: 2015, ref: arxiv("1512.03385"),
       text: "A 152-layer CNN made trainable by residual connections. Its blocks, and the lessons of the paper, are reused almost everywhere." },
@@ -463,10 +493,12 @@
       text: "Find and box every object in an image. R-CNN, Faster R-CNN and YOLO made it fast enough for live video." },
     { id: "vit", label: "Vision Transformer", needs: ["transformer", "imagenet"], year: 2020, ref: arxiv("2010.11929"), aka: "vit patches",
       text: "Cut an image into 16x16 patches, treat them as tokens, and use a plain transformer. Given enough data it matches or beats CNNs." },
-    { id: "segmentation", label: "Segmentation", needs: ["cnn", "unet", "vit", "labelling"], ref: arxiv("2304.02643"), aka: "mask r-cnn sam segment anything",
-      text: "Label every pixel. Segment Anything (SAM) does it for arbitrary objects from a single click or box." },
+    { id: "segmentation", label: "Segmentation", needs: ["cnn", "labelling"], year: 2015, ref: arxiv("1411.4038"), aka: "fcn mask r-cnn sam segment anything",
+      text: "Label every pixel. Fully convolutional networks made it a deep learning task; Segment Anything (SAM) now does it for arbitrary objects from a single click or box." },
     { id: "nerf", label: "NeRF and 3D splatting", needs: ["mlp", "posenc", "integrals"], year: 2020, ref: arxiv("2003.08934"), aka: "3d reconstruction neural radiance",
       text: "Rebuild a 3D scene from photos by learning a function from position and view direction to colour and density, rendered by integrating along rays. Gaussian splatting does the same with millions of explicit blobs, in real time." },
+    { id: "ssvision", label: "Self-supervised vision", year: 2021, needs: ["vit", "selfsup", "contrastive"], ref: arxiv("2104.14294"), aka: "dino mae masked autoencoder",
+      text: "Vision Transformers pretrained without labels, by matching views of the same image (DINO) or filling in masked patches (MAE). Their features work across tasks with little fine-tuning." },
   ]);
 
   add("models", "Generative and multimodal", [
@@ -489,6 +521,8 @@
       text: "Generates raw audio one sample at a time with dilated convolutions. The jump to natural-sounding text to speech." },
     { id: "whisper", label: "Whisper", needs: ["transformer", "seq2seq", "fourier", "webdata"], year: 2022, ref: arxiv("2212.04356"), aka: "speech recognition asr",
       text: "An encoder-decoder transformer trained on 680,000 hours of web audio to transcribe and translate speech, reading log-mel spectrograms." },
+    { id: "ctc", label: "CTC", year: 2006, needs: ["lstm", "dynprog", "softmax"], ref: "https://www.cs.toronto.edu/~graves/icml_2006.pdf", aka: "connectionist temporal classification",
+      text: "A loss that trains speech recognisers from audio and transcripts without knowing which sound lines up with which letter, by summing over every alignment." },
   ]);
 
   add("models", "Reinforcement learning", [
@@ -498,20 +532,26 @@
       text: "A policy gradient method that clips each update so the policy never moves too far at once. Stable enough to become the default, including for RLHF." },
     { id: "alphazero", label: "AlphaGo and AlphaZero", needs: ["mcts", "resnet", "policygrad", "qlearning"], year: 2016, ref: arxiv("1712.01815"), aka: "self-play go chess",
       text: "Tree search guided by a network that predicts good moves and who is winning, trained by playing itself. Beat the world's best at Go, then learned chess and shogi from the rules alone." },
+    { id: "worldmodels", label: "World models", year: 2018, needs: ["vae", "rnn", "mdp"], ref: arxiv("1803.10122"), aka: "dreamer model-based",
+      text: "Learn a model of how the environment responds, then plan or train a policy inside it. Cheaper than learning only from real trial and error, which matters for robots." },
+    { id: "vla", label: "Vision-language-action models", year: 2023, needs: ["vlm", "imitation", "transformer"], ref: arxiv("2307.15818"), aka: "vla rt-2 robot foundation model",
+      text: "A vision-language model that also outputs robot actions, so web-scale knowledge carries over to control: pick up the thing that is not food." },
   ]);
 
   add("models", "Efficiency", [
-    { id: "lora", label: "LoRA", needs: ["svd", "transformer"], year: 2021, ref: arxiv("2106.09685"), aka: "low rank adaptation peft fine-tuning qlora",
+    { id: "lora", label: "LoRA", needs: ["svd", "transformer", "transfer"], year: 2021, ref: arxiv("2106.09685"), aka: "low rank adaptation peft fine-tuning qlora",
       text: "Freeze the model and learn small low-rank updates to its weight matrices. Fine-tuning drops from all of the parameters to well under one percent of them." },
     { id: "quant", label: "Quantisation", needs: ["float", "transformer"], year: 2022, ref: arxiv("2210.17323"), aka: "int8 int4 gptq gguf awq",
       text: "Store weights in 8 or 4 bits instead of 16, with little loss in quality. How a 70B model fits on one GPU, or a 7B model on a laptop." },
     { id: "distill", label: "Knowledge distillation", needs: ["kl", "softmax"], year: 2015, ref: arxiv("1503.02531"), aka: "teacher student",
       text: "Train a small student model to match a large teacher's output probabilities, which carry more information than hard labels." },
+    { id: "pruning", label: "Pruning and sparsity", year: 2015, needs: ["mlp", "regular"], ref: arxiv("1510.00149"), aka: "sparse weights lottery ticket",
+      text: "Remove the weights that matter least and keep the rest. The idea goes back to 1989; at scale it cut networks by an order of magnitude with little loss, and sparsity now shapes inference hardware." },
     { id: "flashattn", label: "FlashAttention", needs: ["selfattn", "hbm", "cuda"], year: 2022, ref: arxiv("2205.14135"),
       text: "Exact attention, reorganised into tiles that stay in fast on-chip memory so the full attention matrix is never written out. Much faster, and a big reason context windows grew." },
     { id: "kvcache", label: "KV cache", needs: ["selfattn", "autoregressive", "hbm"], ref: arxiv("2309.06180"), aka: "pagedattention",
       text: "Keep each token's keys and values so generation does not recompute them. Paging that cache like virtual memory (as vLLM does) lets one server batch many more users." },
-    { id: "specdec", label: "Speculative decoding", needs: ["autoregressive", "montecarlo"], year: 2022, ref: arxiv("2211.17192"), aka: "draft model",
+    { id: "specdec", label: "Speculative decoding", needs: ["autoregressive", "montecarlo", "decoding"], year: 2022, ref: arxiv("2211.17192"), aka: "draft model",
       text: "A small model drafts several tokens and the large model checks them all in one pass. Same output distribution, fewer slow steps." },
     { id: "longctx", label: "Long context", year: 2023, needs: ["posenc", "flashattn", "kvcache"], aka: "context window rope scaling million tokens",
       text: "Context windows grew from about 2,000 tokens to a million and more, through cheaper attention, position encodings that stretch, and leaner KV caches. Whole codebases and books now fit in one prompt." },
@@ -527,6 +567,8 @@
   add("models", "Understanding models", [
     { id: "interp", label: "Interpretability", year: 2020, needs: ["transformer", "autoencoder", "logreg"], aka: "mechanistic circuits probing sparse autoencoders features",
       text: "Working out what a trained network actually computes: probes that read concepts out of activations, circuits traced through attention heads, and sparse autoencoders that split activations into human-readable features." },
+    { id: "adversarial", label: "Adversarial examples and jailbreaks", year: 2013, needs: ["gradients", "cnn"], ref: arxiv("1312.6199"), aka: "adversarial attack robustness jailbreak prompt injection",
+      text: "Inputs crafted to make a model fail: pixel noise that flips a classifier, or prompts that talk a chatbot out of its rules. Finding and defending against them is a large part of safety work." },
   ]);
 
   /* ---------------- fields ---------------- */
@@ -536,74 +578,91 @@
       text: "The whole project of making machines do things that seem to need intelligence. Named in the proposal for the 1956 Dartmouth workshop; learning from data became its dominant approach only decades later." },
     { id: "ml", label: "Machine learning", year: 1959, needs: ["supervised", "unsupervised", "loss", "validation"],
       text: "Programs that improve from data instead of from hand-written rules." },
-    { id: "dl", label: "Deep learning", year: 2006, needs: ["ml", "mlp", "backprop", "sgd", "adam", "init", "gpu", "pytorch", "tensorflow", "jax", "alexnet"],
+    { id: "dl", label: "Deep learning", year: 2006, needs: ["ml", "mlp", "backprop", "sgd", "adam", "init", "gpu", "pytorch", "tensorflow", "jax", "alexnet", "hopfield"],
       text: "Machine learning with many-layered neural networks, trained end to end on GPUs. Took over vision, then speech, then language, from 2012 on." },
   ]);
 
   add("fields", "Domains", [
-    { id: "nlp", label: "Natural language processing", year: 1954, needs: ["dl", "tokenization", "word2vec", "bert", "hmm", "naivebayes"], aka: "nlp text",
+    { id: "nlp", label: "Natural language processing", year: 1954, needs: ["dl", "tokenization", "word2vec", "bert", "hmm", "naivebayes", "ngram"], aka: "nlp text",
       text: "Getting computers to read and write human language: tagging, parsing, translation, question answering." },
-    { id: "cv", label: "Computer vision", year: 1966, needs: ["dl", "opencv", "alexnet", "resnet", "detection", "segmentation", "vit"], aka: "vision images",
+    { id: "cv", label: "Computer vision", year: 1966, needs: ["dl", "opencv", "alexnet", "resnet", "detection", "segmentation", "vit", "ssvision"], aka: "vision images",
       text: "Extracting meaning from images and video: classification, detection, segmentation, tracking, 3D." },
-    { id: "speech", label: "Speech and audio", year: 1952, needs: ["dl", "fourier", "hmm", "wavenet", "whisper"], aka: "asr tts",
+    { id: "speech", label: "Speech and audio", year: 1952, needs: ["dl", "fourier", "hmm", "wavenet", "whisper", "ctc"], aka: "asr tts",
       text: "Recognising, generating and understanding sound: transcription, text to speech, music." },
     { id: "rl", label: "Reinforcement learning", year: 1988, needs: ["mdp", "qlearning", "policygrad", "dqn", "ppo", "alphazero", "gym"], aka: "rl",
       text: "Learning by trial and error from rewards, rather than from labelled examples." },
-    { id: "recsys", label: "Recommender systems", year: 1992, needs: ["ml", "embeddings", "svd", "boosting", "ann"], aka: "recommendation collaborative filtering",
+    { id: "recsys", label: "Recommender systems", year: 1992, needs: ["ml", "embeddings", "svd", "boosting", "ann", "matfact"], aka: "recommendation collaborative filtering",
       text: "Predicting what each user will want next from past behaviour. Quietly the most commercially important ML of the last fifteen years." },
-    { id: "robotics", label: "Robotics", year: 1961, needs: ["rl", "cv", "odes", "vlm"], aka: "control",
+    { id: "robotics", label: "Robotics", year: 1961, needs: ["rl", "cv", "odes", "vlm", "imitation", "worldmodels", "vla"], aka: "control",
       text: "Perception, planning and control for machines acting in the physical world." },
     { id: "timeseries", label: "Time series", year: 1970, needs: ["ml", "arima", "lstm", "boosting", "transformer", "fourier"], aka: "forecasting temporal",
       text: "Predicting demand, prices, load and weather from sequences of past measurements." },
     { id: "datascience", label: "Data science", year: 2008, needs: ["ml", "pandas", "jupyter", "hypothesis", "sklearn"], aka: "analytics",
       text: "Turning data into decisions: cleaning, exploring, testing and modelling, mostly in notebooks." },
+    { id: "ir", label: "Information retrieval", year: 1950, needs: ["bm25", "ann", "denseretrieval"], aka: "search engines ranking retrieval",
+      text: "Finding the documents that answer a need among millions. The field behind search engines, named in 1950, and now the retrieval half of RAG." },
+    { id: "aiscience", label: "AI for science", needs: ["dl", "alphafold", "gnn"], aka: "scientific machine learning",
+      text: "Using learned models as scientific instruments: predicting protein structures, weather, materials and the results of simulations." },
   ]);
 
   add("fields", "Frontier", [
-    { id: "llm", label: "Large language models", year: 2020, needs: ["nlp", "gpt", "scaling", "incontext", "instruct", "rlhf", "deepspeed", "flashattn", "hf", "openweights", "synthetic", "longctx"], aka: "llm",
+    { id: "llm", label: "Large language models", year: 2020, needs: ["nlp", "gpt", "scaling", "incontext", "instruct", "rlhf", "deepspeed", "flashattn", "hf", "openweights", "synthetic", "longctx", "datacentre"], aka: "llm",
       text: "Very large transformers trained on much of the written internet, then tuned to follow instructions. The general-purpose engine under most current AI products." },
     { id: "genai", label: "Generative AI", year: 2022, needs: ["llm", "ldm", "dit", "gan", "vae", "stylegan", "cfg"], aka: "gen ai genai",
       text: "Models that produce new text, images, audio, video and code by sampling from learned distributions." },
-    { id: "multimodal", label: "Multimodal AI", year: 2021, needs: ["llm", "cv", "speech", "clip", "vlm"],
+    { id: "multimodal", label: "Multimodal AI", year: 2021, needs: ["llm", "cv", "speech", "clip", "vlm", "vq"],
       text: "Single models that take in and produce text, images, audio and video together." },
   ]);
 
   /* ---------------- applications ---------------- */
 
   add("apps", "Assistants", [
-    { id: "chat", label: "Chat assistants", year: 2022, needs: ["llm", "rlhf", "reasoning", "kvcache", "ttc"], aka: "chatgpt claude gemini chatbot",
+    { id: "chat", label: "Chat assistants", year: 2022, needs: ["llm", "rlhf", "reasoning", "kvcache", "ttc", "decoding"], aka: "chatgpt claude gemini chatbot",
       text: "An instruction-tuned LLM behind a conversation, usually with search, files and tools attached." },
-    { id: "rag", label: "Retrieval-augmented generation", needs: ["llm", "denseretrieval", "vectordb"], year: 2020, ref: arxiv("2005.11401"), aka: "rag",
+    { id: "rag", label: "Retrieval-augmented generation", needs: ["llm", "denseretrieval", "vectordb", "bm25", "ir"], year: 2020, ref: arxiv("2005.11401"), aka: "rag",
       text: "Fetch relevant documents first and put them in the prompt, so answers rest on sources the model can quote rather than on memory alone." },
     { id: "agents", label: "Agents and tool use", needs: ["llm", "reasoning", "rag", "longctx"], year: 2022, ref: arxiv("2210.03629"), aka: "react function calling mcp",
       text: "LLMs that call tools, read the results and decide what to do next, in a loop, so they can browse, run code and finish multi-step tasks." },
     { id: "coding", label: "Coding assistants", year: 2021, needs: ["llm", "agents", "reasoning", "longctx", "ttc"], aka: "copilot code generation",
       text: "Autocomplete, chat and autonomous agents that read and edit whole codebases. One of the first places LLMs changed everyday work." },
-    { id: "safety", label: "Alignment and evaluation", year: 2016, needs: ["llm", "rlhf", "dpo", "metrics", "hypothesis", "interp"], ref: arxiv("2212.08073"), aka: "benchmarks evals red teaming interpretability constitutional ai",
+    { id: "safety", label: "Alignment and evaluation", year: 2016, needs: ["llm", "rlhf", "dpo", "metrics", "hypothesis", "interp", "benchmarks", "adversarial"], ref: arxiv("2212.08073"), aka: "benchmarks evals red teaming interpretability constitutional ai",
       text: "Measuring what models can do and making them behave as intended: benchmarks, red-teaming, interpretability, and training methods such as Constitutional AI." },
   ]);
 
   add("apps", "Media", [
     { id: "t2i", label: "Image and video generation", year: 2021, needs: ["genai", "ldm", "dit", "cfg", "clip", "diffusers"], aka: "text to image midjourney sora",
       text: "A text prompt in, a picture or a clip out." },
-    { id: "voice", label: "Voice and transcription", year: 2011, needs: ["speech", "whisper", "wavenet", "llm"], aka: "speech to text",
+    { id: "voice", label: "Voice and transcription", year: 2011, needs: ["speech", "whisper", "wavenet", "llm", "vq"], aka: "speech to text",
       text: "Speech recognition on the way in, a language model in the middle, speech synthesis on the way out." },
-    { id: "translation", label: "Machine translation", year: 1954, needs: ["nlp", "seq2seq", "transformer"], aka: "google translate",
+    { id: "translation", label: "Machine translation", year: 1954, needs: ["nlp", "seq2seq", "transformer", "ngram"], aka: "google translate",
       text: "The problem the transformer was invented for. Switched from phrase tables to neural networks around 2016." },
+    { id: "music", label: "Music and audio generation", year: 2023, needs: ["genai", "speech", "diffusion", "vq", "multimodal"], ref: arxiv("2301.11325"), aka: "suno udio musiclm sound effects",
+      text: "Songs, sound effects and voices generated from a text prompt, usually as tokens from a neural audio codec or with diffusion." },
   ]);
 
   add("apps", "Physical world", [
-    { id: "driving", label: "Autonomous driving", year: 2004, needs: ["cv", "detection", "segmentation", "robotics"], aka: "self-driving",
+    { id: "driving", label: "Autonomous driving", year: 2004, needs: ["cv", "detection", "segmentation", "robotics", "imitation"], aka: "self-driving",
       text: "Perception from cameras and lidar, prediction of what everyone nearby will do, and planning, all in real time." },
     { id: "medical", label: "Medical imaging", year: 2015, needs: ["cv", "unet", "segmentation", "validation"], aka: "radiology",
       text: "Finding tumours, fractures and retinal disease in scans, where validation on held-out patients matters more than anywhere." },
-    { id: "bio", label: "Protein and drug design", needs: ["alphafold", "diffusion", "gnn"], aka: "biology chemistry",
+    { id: "bio", label: "Protein and drug design", needs: ["alphafold", "diffusion", "gnn", "aiscience"], aka: "biology chemistry",
       text: "Predicting structures, generating new proteins with diffusion, and screening molecules with graph networks." },
+    { id: "weather", label: "Weather forecasting", year: 2023, needs: ["aiscience", "gnn", "timeseries", "transformer"], ref: arxiv("2212.12794"), aka: "graphcast climate",
+      text: "Learned models such as GraphCast now beat traditional numerical forecasts on many measures, producing a ten-day global forecast in about a minute." },
   ]);
 
   add("apps", "Ranking", [
-    { id: "feeds", label: "Search and feeds", year: 1998, needs: ["recsys", "denseretrieval", "boosting", "bert"], aka: "ranking ads",
+    { id: "feeds", label: "Search and feeds", year: 1998, needs: ["recsys", "denseretrieval", "boosting", "bert", "bm25", "ir"], aka: "ranking ads",
       text: "Web search, shopping, ads and social feeds: retrieve candidates, then rank them with learned models, billions of times a day." },
+  ]);
+
+  add("apps", "Work and science", [
+    { id: "ocr", label: "Document understanding", year: 1974, needs: ["cv", "vlm"], aka: "ocr pdf forms receipts",
+      text: "Reading scanned pages, forms and receipts. Optical character recognition goes back to the 1970s; vision-language models now read layout, tables and handwriting in one pass." },
+    { id: "analytics", label: "Experimentation and analytics", needs: ["datascience", "hypothesis"], aka: "a/b testing ab experiments dashboards",
+      text: "A/B tests, forecasts and dashboards that decide what a business ships. Most data science ends up here." },
+    { id: "theorem", label: "Theorem proving", year: 1956, needs: ["logic", "search", "llm", "alphazero"], aka: "lean formal proof maths olympiad",
+      text: "Machines that find and check mathematical proofs, from the 1956 Logic Theorist to language models writing proofs in Lean, checked by search." },
   ]);
 
   add("apps", "Serving", [
@@ -611,7 +670,7 @@
       text: "Databases that store embeddings and answer nearest-neighbour queries at scale. The memory layer behind most RAG systems." },
     { id: "vllm", label: "Inference servers", year: 2023, needs: ["llm", "kvcache", "specdec", "pytorch", "cuda"], ref: "https://github.com/vllm-project/vllm", aka: "vllm sglang tensorrt serving",
       text: "Software such as vLLM that serves a model to many users at once, batching requests and managing the KV cache." },
-    { id: "local", label: "Local models (llama.cpp)", year: 2023, needs: ["llm", "quant", "cpu", "openweights"], ref: "https://github.com/ggml-org/llama.cpp", aka: "llama.cpp ollama on-device",
+    { id: "local", label: "Local models (llama.cpp)", year: 2023, needs: ["llm", "quant", "cpu", "openweights", "pruning"], ref: "https://github.com/ggml-org/llama.cpp", aka: "llama.cpp ollama on-device",
       text: "Plain C and C++ inference over quantised weights, so open models run on laptops and phones without a datacentre GPU." },
   ]);
 

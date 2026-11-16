@@ -1,6 +1,6 @@
 {
   "title": "Dependency Structure of Modern AI",
-  "description": "A layered map of 211 concepts in modern AI and the 522 dependencies between them, tracing LLMs, computer vision and generative models back through architectures, learning methods, software, hardware and mathematics. Interactive version: https://dsmai.aravpanwar.com/",
+  "description": "A layered map of 239 concepts in modern AI and the 630 dependencies between them, tracing LLMs, computer vision and generative models back through architectures, learning methods, software, hardware and mathematics. Interactive version: https://dsmai.aravpanwar.com/",
   "upload_type": "software",
   "version": "1.0.0",
   "creators": [

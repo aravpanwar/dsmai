@@ -16,7 +16,9 @@ permissions:
 
 jobs:
   check:
+    # Editing a pull request this already closed would otherwise comment again.
     if: >-
+      github.event.pull_request.state == 'open' &&
       github.event.pull_request.author_association != 'OWNER' &&
       github.event.pull_request.author_association != 'MEMBER' &&
       github.event.pull_request.author_association != 'COLLABORATOR'
@@ -37,7 +39,7 @@ jobs:
 
           for n in $nums; do
             approved=$(gh api "repos/${REPO}/issues/${n}" \
-              --jq 'select(.pull_request == null) | [.labels[].name] | index("approved") != null' 2>/dev/null || true)
+              --jq 'select(.pull_request == null and .state == "open") | [.labels[].name] | index("approved") != null' 2>/dev/null || true)
             if [ "$approved" = "true" ]; then
               echo "linked to approved issue #${n}"
               exit 0
