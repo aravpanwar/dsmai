@@ -6,8 +6,8 @@ abstract: >-
   them, tracing LLMs, computer vision and generative models back through
   architectures, learning methods, software, hardware and mathematics.
 type: software
-version: 1.0.0
-date-released: 2026-11-12
+version: 1.0.1
+date-released: 2026-11-16
 doi: 10.5281/zenodo.24157574
 authors:
   - family-names: Panwar
