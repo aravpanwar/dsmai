@@ -147,6 +147,11 @@ a.icon{ flex:none; text-decoration:none; }
 .node.down .dot{ fill:var(--down); }
 .node.path .dot{ fill:var(--path); }
 .node.focus text{ font-weight:750; }
+/* Nesting: folded concepts are hidden; a parent's marker opens them. */
+.node.folded{ display:none; }
+.node .fold{ fill:var(--ochre); font-size:11.5px; font-weight:700; cursor:pointer; }
+.node .fold:hover{ fill:var(--ink); }
+#map.tracing .node:not(.on) .fold{ fill:var(--faint); }
 .node.focus .ring{ display:inline; }
 
 /* ---------- legend + zoom ---------- */
@@ -283,6 +288,11 @@ a.icon{ flex:none; text-decoration:none; }
 .chip::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--c); flex:none; filter:brightness(1.35) saturate(.8); }
 .chip:hover{ border-color:var(--rail-ink); }
 .none-yet{ font-family:var(--head); font-size:13px; color:var(--rail-muted); margin:0; }
+.foldbtn{
+  margin-top:10px; padding:5px 10px; border:1px solid var(--rail-line); border-radius:2px; background:none;
+  color:var(--rail-ink); font-family:var(--head); font-size:12.5px; cursor:pointer;
+}
+.foldbtn:hover{ border-color:var(--ochre); }
 .panel .act{
   margin-top:26px; padding-top:16px; border-top:1px solid var(--rail-line);
   font-family:var(--head); font-size:12.5px; color:var(--rail-muted); line-height:1.5;
@@ -292,6 +302,21 @@ a.icon{ flex:none; text-decoration:none; }
   background:none; color:var(--rail-ink); font-family:var(--head); font-size:13px; font-weight:600; cursor:pointer;
 }
 .act button:hover,.act button.on{ background:var(--ochre); color:#1e2a1f; }
+
+/* ---------- study list ---------- */
+.panel .tally{ font-family:var(--head); font-size:12.5px; color:var(--rail-muted); margin:-10px 0 4px; }
+.panel .tally b{ color:var(--rail-ink); font-variant-numeric:tabular-nums; }
+ol.study{ list-style:none; margin:0; padding:0; display:grid; gap:2px; }
+ol.study li{ display:flex; align-items:center; gap:10px; min-height:30px; }
+ol.study input{ flex:none; width:16px; height:16px; margin:0; accent-color:var(--ochre); cursor:pointer; }
+.slabel{
+  display:inline-flex; align-items:center; gap:8px; padding:3px 0; border:0; background:none; color:var(--rail-ink);
+  font-family:var(--head); font-size:14px; text-align:left; cursor:pointer;
+}
+.slabel::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--c); flex:none; filter:brightness(1.35) saturate(.8); }
+button.slabel:hover{ text-decoration:underline; text-decoration-color:var(--ochre); text-underline-offset:3px; }
+ol.study input:checked + .slabel{ color:var(--rail-muted); text-decoration:line-through; text-decoration-color:var(--rail-muted); }
+.slabel.goal{ font-weight:700; margin-left:26px; cursor:default; }
 
 /* ---------- index view ---------- */
 .index{ position:absolute; inset:0; z-index:7; overflow-y:auto; background:var(--paper); padding:44px 48px 96px; }
@@ -305,6 +330,7 @@ a.icon{ flex:none; text-decoration:none; }
 .ix-group{ break-inside:avoid; margin:0 0 22px; }
 .ix-group h3{ font-size:10.5px; font-weight:650; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 8px; }
 .ix-item{ display:block; width:100%; text-align:left; background:none; border:0; padding:6px 0; cursor:pointer; }
+.ix-item.kid{ padding-left:16px; border-left:2px solid var(--line); }
 .ix-item b{ display:block; font-family:var(--head); font-size:15px; font-weight:650; color:var(--ink); }
 .ix-item span{ display:block; font-size:14px; line-height:1.45; color:var(--ink-2); margin-top:2px; }
 .ix-item small{ display:block; font-family:var(--head); font-size:12px; color:var(--muted); margin-top:4px; line-height:1.4; }

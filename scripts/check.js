@@ -33,6 +33,18 @@ for (const n of nodes) {
   }
 }
 
+// A nested concept is drawn inside its parent's group, folded under it, so it
+// has to share the parent's column and group. One level of nesting for now.
+for (const n of nodes) {
+  if (!n.partOf) continue;
+  const host = byId.get(n.partOf);
+  if (!host) { problems.push(`expected a known parent "${n.partOf}" for "${n.id}"`); continue; }
+  if (host.layer !== n.layer || host.group !== n.group) {
+    problems.push(`expected "${n.id}" in the same column and group as its parent "${host.id}"`);
+  }
+  if (host.partOf) problems.push(`expected one level of nesting, but "${host.id}" is itself inside "${host.partOf}"`);
+}
+
 // Same-layer needs are allowed, so cycles can only form inside a layer, but a
 // full DFS is cheap and catches them wherever they appear.
 const state = new Map();

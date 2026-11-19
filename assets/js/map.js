@@ -15,6 +15,10 @@
   const PAD_TOP = 24;
   const MARK = 13;
   const SWEEPS = 23;
+  // Nested concepts sit indented under their parent, and a parent's fold
+  // marker needs room after its label.
+  const INDENT = 14;
+  const FOLD_W = 34;
   // The floor only matters where fitting the whole map needs less than it:
   // a 390px phone needs about 0.16.
   const K_MIN = 0.1, K_MAX = 2.5;
@@ -56,6 +60,24 @@
       p.children.push(n); p.outE.push(e);
     }
   }
+
+  // Nesting: a concept can sit inside another in its column (partOf), the
+  // way Bayes' theorem sits inside probability theory. Nested concepts start
+  // folded away so the map stays readable as detail grows; their links are
+  // drawn from the parent until it is opened.
+  for (const n of nodes) { n.kids = []; n.dx = 0; n.extra = 0; }
+  for (const n of nodes) {
+    if (!n.partOf) continue;
+    const host = byId.get(n.partOf);
+    if (!host || host.L !== n.L || host.partOf) { console.warn(`expected a parent in the same column for "${n.id}"`); continue; }
+    n.host = host;
+    n.dx = INDENT;
+    host.kids.push(n);
+    host.extra = FOLD_W;
+  }
+  const open = new Set();
+  const shown = (n) => !n.host || open.has(n.host);
+  const rep = (n) => (shown(n) ? n : n.host);
 
   // The set is stored before it is filled, so a cycle that slipped past
   // scripts/check.js ends the recursion instead of overflowing the stack.
@@ -117,7 +139,7 @@
   function columns() {
     let x = PAD_X;
     for (const L of layers) {
-      L.w = MARK + Math.max(...L.nodes.map((n) => n.w));
+      L.w = MARK + Math.max(...L.nodes.map((n) => n.w + n.dx + n.extra));
       L.x = x;
       x += L.w + GAP;
     }
@@ -130,7 +152,17 @@
     for (const g of L.groups) {
       g.y = y;
       y += GROUP_HEAD;
-      for (const n of g.nodes) { n.y = y + row / 2; y += row; }
+      for (const n of g.nodes) {
+        if (n.host) continue;
+        n.y = y + row / 2;
+        y += row;
+        // A folded concept keeps its parent's height, so edges and the
+        // barycentre sweep still have somewhere to point.
+        for (const k of g.nodes) {
+          if (k.host !== n) continue;
+          if (open.has(n)) { k.y = y + row / 2; y += row; } else k.y = n.y;
+        }
+      }
       y += GROUP_GAP;
     }
     L.h = y;
@@ -188,8 +220,8 @@
       e.box = [x - b, top, x, bottom];
       return `M${x},${s.y}C${x - b},${s.y} ${x - b},${t.y} ${x},${t.y}`;
     }
-    const x1 = s.L.x + MARK + s.w + 5;
-    const x2 = t.L.x - t.r - 3;
+    const x1 = s.L.x + s.dx + MARK + s.w + s.extra + 5;
+    const x2 = t.L.x + t.dx - t.r - 3;
     const dx = (x2 - x1) * 0.5;
     e.box = [x1, top, x2, bottom];
     return `M${x1},${s.y}C${x1 + dx},${s.y} ${x2 - dx},${t.y} ${x2},${t.y}`;
@@ -208,6 +240,27 @@
     return x;
   }
 
+  // What is drawn: each real dependency, moved to the nearest visible end.
+  // Folding can turn several into one, or into a line that would point back
+  // up the chain (a parent "needing" its own foundations), and those are left
+  // out rather than drawn twice or backwards.
+  let links = [];
+  const linkOf = new Map();
+  function buildLinks() {
+    const byKey = new Map();
+    linkOf.clear();
+    for (const e of edges) {
+      const s = rep(e.s), t = rep(e.t);
+      if (s === t || anc(s).has(t)) continue;
+      const key = s.id + ">" + t.id;
+      let l = byKey.get(key);
+      if (!l) { l = { s, t }; byKey.set(key, l); }
+      linkOf.set(e, l);
+    }
+    links = [...byKey.values()];
+    for (const l of links) { l.d = edgePath(l); l.p = new Path2D(l.d); }
+  }
+
   function render() {
     vp.textContent = "";
     svg.setAttribute("width", W);
@@ -222,24 +275,26 @@
       }
     }
 
-    for (const e of edges) {
-      e.d = edgePath(e);
-      e.p = new Path2D(e.d);
-    }
+    buildLinks();
 
     nodeG = el("g", {}, vp);
     for (const n of nodes) {
       const row = isField(n) ? FIELD_ROW : ROW;
       const g = el("g", {
-        class: "node" + (n.L.i % 2 ? " alt" : "") + (isField(n) ? " field" : ""),
-        transform: `translate(${n.L.x},${n.y})`,
+        class: "node" + (n.L.i % 2 ? " alt" : "") + (isField(n) ? " field" : "") + (n.host ? " kid" : "") + (shown(n) ? "" : " folded"),
+        transform: `translate(${n.L.x + n.dx},${n.y})`,
         style: `--c:var(--l${n.L.i})`,
         "data-id": n.id,
       }, nodeG);
-      el("rect", { class: "hit", x: -10, y: -row / 2, width: MARK + n.w + 18, height: row }, g);
+      el("rect", { class: "hit", x: -10, y: -row / 2, width: MARK + n.w + n.extra + 18, height: row }, g);
       el("circle", { class: "ring", r: n.r + 3.2 }, g);
       el("circle", { class: "dot", r: n.r }, g);
       el("text", { x: MARK, dy: "0.35em" }, g).textContent = n.label;
+      if (n.kids.length) {
+        const f = el("text", { class: "fold", x: MARK + n.w + 11, dy: "0.35em" }, g);
+        f.textContent = open.has(n) ? "\u2212" : `+${n.kids.length}`;
+        el("title", {}, f).textContent = open.has(n) ? "Fold away" : `Show the ${n.kids.length} inside`;
+      }
       n.el = g;
       n.painted = null;
     }
@@ -327,7 +382,7 @@
 
   /* ---------------- curves ---------------- */
 
-  // The 630 curves and the column bands are painted on a canvas under the
+  // The 827 curves and the column bands are painted on a canvas under the
   // svg labels. As svg they were almost the entire cost of every repaint:
   // hundreds of faint, overlapping, map-wide strokes blended pixel by pixel.
   // The canvas is screen-sized, so only visible pixels are drawn, and curves
@@ -346,7 +401,7 @@
   }
 
   function draw() {
-    if (!edges.length || !edges[0].p) return;
+    if (!links.length || !links[0].p) return;
     const dpr = window.devicePixelRatio || 1;
     const w = Math.round(size.width * dpr), h = Math.round(size.height * dpr);
     if (edgeCanvas.width !== w || edgeCanvas.height !== h) { edgeCanvas.width = w; edgeCanvas.height = h; }
@@ -374,7 +429,7 @@
     const lost = Math.max(1, EDGE_WIDTH * device);
     const alpha = Math.min(0.3, ink.edgeAlpha * lost) * (tracing ? 0.35 : 1);
     ectx.strokeStyle = `rgba(${ink.edge},${alpha})`;
-    for (const e of edges) if (visible(e)) ectx.stroke(e.p);
+    for (const e of links) if (visible(e)) ectx.stroke(e.p);
 
     for (const [e, cls] of hotList) {
       if (!visible(e)) continue;
@@ -446,8 +501,8 @@
   // on phones), so "centre" means the centre of whatever is still visible.
   function centerOn(list, instant) {
     const { w: vw, h: vh } = room();
-    const xs = list.map((n) => n.L.x), ys = list.map((n) => n.y);
-    const x0 = Math.min(...xs) - 20, x1 = Math.max(...list.map((n) => n.L.x + MARK + n.w)) + 20;
+    const xs = list.map((n) => n.L.x + n.dx), ys = list.map((n) => n.y);
+    const x0 = Math.min(...xs) - 20, x1 = Math.max(...list.map((n) => n.L.x + n.dx + MARK + n.w + n.extra)) + 20;
     const y0 = Math.min(...ys) - 30, y1 = Math.max(...ys) + 30;
     const fitK = Math.min(vw / (x1 - x0), vh / (y1 - y0));
     const k = clampK(Math.min(Math.max(view.k, list.length > 1 ? 0.3 : 0.95), fitK, 1.2));
@@ -479,7 +534,8 @@
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
     if (pointers.size === 1) {
-      press = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, node: nodeAt(e.target), shift: e.shiftKey, moved: false };
+      const fold = e.target.closest && e.target.closest(".fold") ? nodeAt(e.target) : null;
+      press = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, node: nodeAt(e.target), fold, shift: e.shiftKey, moved: false };
     } else if (pointers.size === 2) {
       pinch = { ...pinchInfo(), k: view.k, x: view.x, y: view.y };
       if (press) press.moved = true;
@@ -515,7 +571,10 @@
       if (rest) press = { x: rest.x, y: rest.y, vx: view.x, vy: view.y, node: null, moved: true };
     }
     if (pointers.size === 0) {
-      if (press && !press.moved && e.type === "pointerup") tap(press.node, press.shift);
+      if (press && !press.moved && e.type === "pointerup") {
+        if (press.fold) setFold(press.fold, !open.has(press.fold));
+        else tap(press.node, press.shift);
+      }
       press = null;
       canvas.classList.remove("dragging");
     }
@@ -574,9 +633,16 @@
 
   /* ---------------- tracing ---------------- */
 
-  const state = { focus: null, target: null, hover: null, mode: "full", picking: false };
+  const state = { focus: null, target: null, hover: null, mode: "full", picking: false, study: false };
 
   function paint(classes, hot, focus) {
+    // A folded concept's highlight shows on its parent, and its real edges on
+    // whatever line now stands for them.
+    for (const [n, c] of [...classes]) if (!shown(n) && !classes.has(n.host)) classes.set(n.host, c);
+    focus = focus.map(rep);
+    const lifted = new Map();
+    for (const [e, cls] of hot) { const l = linkOf.get(e); if (l && !lifted.has(l)) lifted.set(l, cls); }
+    hot = [...lifted];
     tracing = classes.size > 0;
     svg.classList.toggle("tracing", tracing);
     // Only concepts whose state changed are touched, so sweeping the pointer
@@ -699,7 +765,7 @@
         h("span", { className: "rnum" }, `${used.length}/${g.nodes.length}`))));
   }
 
-  function showNode(n) {
+  function showNode(n, keep) {
     const up = anc(n), down = desc(n);
     const meta = [];
     if (n.year) meta.push(h("span", {}, String(n.year)));
@@ -709,6 +775,9 @@
       type: "button", className: state.picking ? "on" : "",
       on: (ev) => { state.picking = !state.picking; ev.currentTarget.classList.toggle("on", state.picking); },
     }, "Trace a path from here");
+    const studyBtn = up.size
+      ? h("button", { type: "button", on: () => openStudy(n) }, `Study list: ${up.size} concepts in order`)
+      : null;
     detail.replaceChildren(...[
       h("p", { className: "kicker" }, h("span", { className: "n" }, pad2(n.L.i)), `  ${n.L.name} · ${n.group}`),
       h("h2", {}, n.label),
@@ -720,13 +789,100 @@
         h("div", {}, h("b", {}, String(depth(n))), h("span", {}, "levels in its longest chain"))),
       roots ? h("h3", {}, "The mathematics underneath") : null,
       roots,
+      n.host ? h("h3", {}, "Part of") : null,
+      n.host ? chips([n.host], "") : null,
+      n.kids.length ? h("h3", {}, "Inside") : null,
+      n.kids.length ? chips(n.kids, "") : null,
+      n.kids.length ? h("button", { type: "button", className: "foldbtn", on: () => setFold(n, !open.has(n)) },
+        open.has(n) ? "Fold these away on the map" : `Show these ${n.kids.length} on the map`) : null,
       h("h3", {}, "Made directly on"),
       chips(n.parents, "Nothing on this map. It is a starting point."),
       h("h3", {}, "Leads directly to"),
       chips(n.children, "Nothing yet. This is where the map ends."),
-      h("div", { className: "act" }, pickBtn, "Or shift-click any concept to see how the two connect."),
+      h("div", { className: "act" }, studyBtn, pickBtn, "Or shift-click any concept to see how the two connect."),
     ].filter(Boolean));
+    const top = panel.scrollTop;
     openPanel();
+    if (keep) panel.scrollTop = top;
+  }
+
+  /* ---------------- study list ---------------- */
+
+  // Everything a concept rests on, as stages to learn in order. A concept's
+  // stage is its longest chain of prerequisites, so stage 1 has nothing before
+  // it on the map and every later stage only needs the stages above it.
+  const LEARNED_KEY = "dsmai-learned";
+  let learned = new Set();
+  try { learned = new Set(JSON.parse(localStorage.getItem(LEARNED_KEY) || "[]")); } catch (e) { /* private mode */ }
+  function saveLearned() {
+    try { localStorage.setItem(LEARNED_KEY, JSON.stringify([...learned])); } catch (e) { /* private mode */ }
+  }
+
+  function stages(n) {
+    const out = [];
+    for (const x of anc(n)) (out[depth(x)] ||= []).push(x);
+    return out.filter(Boolean).map((s) => s.sort(byPlace));
+  }
+
+  function studyText(n) {
+    const lines = [`Study list: ${n.label} (${anc(n).size} concepts)`, `${location.origin}${location.pathname}#study:${n.id}`];
+    stages(n).forEach((s, i) => {
+      lines.push("", `Stage ${i + 1}`);
+      for (const x of s) lines.push(`- [${learned.has(x.id) ? "x" : " "}] ${x.label}`);
+    });
+    lines.push("", `Goal`, `- [ ] ${n.label}`);
+    return lines.join("\n");
+  }
+
+  function showStudy(n) {
+    const all = stages(n);
+    const total = anc(n).size;
+    const count = h("b", {});
+    const tally = () => { count.textContent = String([...anc(n)].filter((x) => learned.has(x.id)).length); };
+    tally();
+    const row = (x) => {
+      const box = h("input", { type: "checkbox", checked: learned.has(x.id), title: "I know this" });
+      box.setAttribute("aria-label", `I know ${x.label}`);
+      box.addEventListener("change", () => {
+        if (box.checked) learned.add(x.id); else learned.delete(x.id);
+        saveLearned();
+        tally();
+      });
+      return h("li", { style: `--c:var(--l${x.L.i})` }, box,
+        h("button", { type: "button", className: "slabel", title: `${x.L.name} · ${x.group}`, on: () => select(x, { center: true }) }, x.label));
+    };
+    const copy = h("button", { type: "button" }, "Copy as a checklist");
+    copy.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(studyText(n)); copy.textContent = "Copied"; }
+      catch (e) { copy.textContent = "Couldn't copy"; }
+      setTimeout(() => { copy.textContent = "Copy as a checklist"; }, 1800);
+    });
+    detail.replaceChildren(
+      h("p", { className: "kicker" }, "Study list"),
+      h("h2", {}, n.label),
+      h("p", { className: "text summary" },
+        `${total} concept${total === 1 ? "" : "s"} to know first, in ${all.length} stage${all.length === 1 ? "" : "s"}. Each stage only needs the ones above it.`),
+      h("p", { className: "tally" }, count, ` of ${total} ticked. Ticks are saved in this browser.`),
+      ...all.flatMap((s, i) => [
+        h("h3", { className: "sub" }, h("span", { className: "n" }, `Stage ${i + 1}`), i === 0 ? "  Start here" : ""),
+        h("ol", { className: "study" }, s.map(row)),
+      ]),
+      h("h3", { className: "sub" }, h("span", { className: "n" }, "Goal")),
+      h("ol", { className: "study" }, h("li", { style: `--c:var(--l${n.L.i})` }, h("span", { className: "slabel goal" }, n.label))),
+      h("div", { className: "act" }, copy, h("button", { type: "button", on: () => select(n) }, `Back to ${n.label}`)),
+    );
+    openPanel();
+  }
+
+  function openStudy(n) {
+    reveal(n);
+    state.focus = n;
+    state.target = null;
+    state.picking = false;
+    state.study = true;
+    refresh();
+    showStudy(n);
+    writeMarker();
   }
 
   function byLayer(list) {
@@ -822,12 +978,35 @@
     $("#legend").classList.add("used");
   }
 
+  // Opening a folded concept's parent first, so whatever asks for it (search,
+  // a deep link, a chip, a study list) lands on something visible.
+  function reveal(...list) {
+    const hosts = list.filter((n) => n && !shown(n)).map((n) => n.host);
+    if (hosts.length) setFold(hosts, true);
+  }
+
+  function setFold(hosts, on) {
+    const list = [].concat(hosts).filter((h) => open.has(h) !== on);
+    if (!list.length) return;
+    for (const h of list) { if (on) open.add(h); else open.delete(h); }
+    if (!on && state.focus && list.includes(state.focus.host)) state.focus = state.focus.host;
+    for (const L of new Set(list.map((h) => h.L))) stack(L);
+    H = Math.max(...layers.map((L) => L.h)) + PAD_TOP;
+    render();
+    apply();
+    applyEra();
+    refresh();
+    if (state.focus && !state.target && !state.study) showNode(state.focus, true);
+  }
+
   function select(n, opts = {}) {
     used();
+    reveal(n);
     if (!seen(n)) setEra(born(n));
     state.focus = n;
     state.target = null;
     state.picking = false;
+    state.study = false;
     refresh();
     showNode(n);
     writeMarker();
@@ -835,9 +1014,11 @@
   }
 
   function selectPath(a, b, opts = {}) {
+    reveal(a, b);
     state.focus = a;
     state.target = b;
     state.picking = false;
+    state.study = false;
     refresh();
     showPath(a, b);
     writeMarker();
@@ -848,6 +1029,7 @@
     state.focus = null;
     state.target = null;
     state.picking = false;
+    state.study = false;
     closePanel();
     refresh();
     writeMarker();
@@ -884,7 +1066,8 @@
   /* ---------------- deep links ---------------- */
 
   function writeMarker() {
-    const m = state.focus ? state.focus.id + (state.target ? ".." + state.target.id : "") : "";
+    const m = !state.focus ? "" : state.study ? "study:" + state.focus.id
+      : state.focus.id + (state.target ? ".." + state.target.id : "");
     history.replaceState(null, "", m ? "#" + m : location.pathname + location.search);
     if (embed) caption();
   }
@@ -1007,7 +1190,13 @@
   $("#eraClose").addEventListener("click", () => openTimeline(false));
 
   function readMarker(instant) {
-    const [a, b] = decodeURIComponent(location.hash.slice(1)).split("..").map((s) => byId.get(s));
+    const mark = decodeURIComponent(location.hash.slice(1));
+    if (mark.startsWith("study:")) {
+      const n = byId.get(mark.slice(6));
+      if (n) { if (!seen(n)) setEra(born(n)); openStudy(n); centerOn([n], instant); }
+      return !!n;
+    }
+    const [a, b] = mark.split("..").map((s) => byId.get(s));
     if (a && b) selectPath(a, b, { center: true, instant });
     else if (a) select(a, { center: true, instant });
     return !!a;
@@ -1102,7 +1291,9 @@
       h("header", {}, h("span", { className: "num" }, `${pad2(L.i)} / ${pad2(layers.length - 1)}`), h("h2", {}, L.name), h("p", {}, L.note)),
       h("div", { className: "ix-groups" }, L.groups.map((g) => h("div", { className: "ix-group" },
         h("h3", {}, g.name),
-        L.nodes.filter((n) => n.group === g.name).map((n) => h("button", { type: "button", className: "ix-item", on: () => { showView("map"); select(n, { center: true }); } },
+        L.nodes.filter((n) => n.group === g.name && !n.host).flatMap((n) => [n, ...n.kids]).map((n) => h("button", {
+          type: "button", className: "ix-item" + (n.host ? " kid" : ""), on: () => { showView("map"); select(n, { center: true }); },
+        },
           h("b", {}, n.label), h("span", {}, n.text),
           n.parents.length ? h("small", {}, "Made on " + listing(n.parents.map((p) => p.label))) : null)))))));
     index.replaceChildren(intro, ...sections);
@@ -1141,14 +1332,14 @@
   function walk(key) {
     const n = state.focus;
     if (!n) {
-      select(layers[0].nodes.slice().sort((a, b) => a.y - b.y)[0], { center: true });
+      select(layers[0].nodes.filter(shown).sort((a, b) => a.y - b.y)[0], { center: true });
       return;
     }
     const near = (list) => (list.length ? list.reduce((a, b) => (Math.abs(b.y - n.y) < Math.abs(a.y - n.y) ? b : a)) : null);
-    const column = (i) => (layers[i] ? layers[i].nodes : []);
+    const column = (i) => (layers[i] ? layers[i].nodes.filter(shown) : []);
     let next = null;
     if (key === "ArrowUp" || key === "ArrowDown") {
-      const col = n.L.nodes.slice().sort((a, b) => a.y - b.y);
+      const col = n.L.nodes.filter(shown).sort((a, b) => a.y - b.y);
       next = col[col.indexOf(n) + (key === "ArrowDown" ? 1 : -1)];
     } else if (key === "ArrowLeft") {
       next = near(n.parents) || near(column(n.L.i - 1));

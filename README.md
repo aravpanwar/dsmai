@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24157574.svg)](https://doi.org/10.5281/zenodo.24157574)
 
-An interactive map of 239 AI concepts and the 630 dependencies between them, in eight layers from mathematics to applications.
+An interactive map of 301 AI concepts and the 827 dependencies between them, in eight layers from mathematics to applications.
 
 **Live:** https://dsmai.aravpanwar.com/
 
@@ -18,7 +18,9 @@ An interactive map of 239 AI concepts and the 630 dependencies between them, in 
 
 - Hover a concept to trace it, click to pin it, and shift-click a second concept to see the path between them.
 - Keys: `/` search, arrow keys walk the map, `+` and `-` zoom, `0` fits the whole map, `Esc` clears.
-- Links: `#transformer` opens a concept, `#matmul..chat` opens a path.
+- Nesting: finer concepts (Bayes' theorem inside probability theory, grouped-query attention inside self-attention) are folded under their parent. Click the `+2` next to a parent to open it; search and links open it for you.
+- Study list: open a concept and choose "Study list" to get everything under it in the order to learn it, with checkboxes saved in your browser and a copy-as-checklist button.
+- Links: `#transformer` opens a concept, `#matmul..chat` opens a path, `#study:transformer` opens a study list.
 - `?theme=light` switches to the light theme, and `?embed` gives a stripped-down version for embedding in a page.
 
 ## Run locally
