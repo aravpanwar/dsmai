@@ -22,6 +22,7 @@ A learning reference for modern AI. Pick any concept, from linear algebra to cha
 - Nesting: finer concepts (Bayes' theorem inside probability theory, grouped-query attention inside self-attention) are folded under their parent. Click the `+2` next to a parent to open it; search and links open it for you.
 - Links: `#transformer` opens a concept, `#matmul..chat` opens a path, `#study:transformer` opens a study list.
 - `?theme=light` switches to the light theme, and `?embed` gives a stripped-down version for embedding in a page.
+- Visits are counted with [GoatCounter](https://www.goatcounter.com/), which sets no cookies and keeps no personal data. Ticks in a study list stay in your browser.
 
 ## Run locally
 

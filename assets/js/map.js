@@ -722,6 +722,16 @@
   const panel = $("#panel");
   const detail = $("#detail");
 
+  // Counts what people do here, beyond page views, in GoatCounter. The
+  // counter loads after the map (a deep link can open a study list first), so
+  // early calls wait a few seconds for it; ad blockers stop it, which is fine.
+  function track(name, tries = 10) {
+    const gc = window.goatcounter;
+    if (gc && gc.count) {
+      try { gc.count({ path: "dsmai:" + name, event: true }); } catch (e) { /* counting never gets in the way */ }
+    } else if (tries > 0) setTimeout(() => track(name, tries - 1), 1000);
+  }
+
   function h(tag, props, ...kids) {
     const x = document.createElement(tag);
     for (const k in props || {}) {
@@ -853,7 +863,7 @@
     };
     const copy = h("button", { type: "button" }, "Copy as a checklist");
     copy.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(studyText(n)); copy.textContent = "Copied"; }
+      try { await navigator.clipboard.writeText(studyText(n)); copy.textContent = "Copied"; track("copy/" + n.id); }
       catch (e) { copy.textContent = "Couldn't copy"; }
       setTimeout(() => { copy.textContent = "Copy as a checklist"; }, 1800);
     });
@@ -869,7 +879,10 @@
       ]),
       h("h3", { className: "sub" }, h("span", { className: "n" }, "Goal")),
       h("ol", { className: "study" }, h("li", { style: `--c:var(--l${n.L.i})` }, h("span", { className: "slabel goal" }, n.label))),
-      h("div", { className: "act" }, copy, h("button", { type: "button", on: () => select(n) }, `Back to ${n.label}`)),
+      h("div", { className: "act" }, copy, h("button", { type: "button", on: () => select(n) }, `Back to ${n.label}`),
+        h("p", { className: "star" }, "Free and open source. If this helped, a ",
+          h("a", { href: "https://github.com/aravpanwar/dsmai", target: "_blank", rel: "noopener", on: () => track("github-study") }, "star on GitHub"),
+          " helps other people find it.")),
     );
     openPanel();
   }
@@ -882,6 +895,7 @@
     state.study = true;
     refresh();
     showStudy(n);
+    track("study/" + n.id);
     writeMarker();
   }
 
@@ -1387,6 +1401,7 @@
       Object.assign(view, home());
       apply();
       built = true;
+      if (location.hash.length > 1) track("link/" + decodeURIComponent(location.hash.slice(1)));
       if (!readMarker(true)) refresh();
     } else {
       apply();
